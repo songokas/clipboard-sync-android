@@ -1,0 +1,38 @@
+<PreferenceScreen
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <EditTextPreference
+        app:key="group"
+        app:title="Group name"
+        app:defaultValue="default"
+        app:summary="Group to use"/>
+
+    <EditTextPreference
+        app:key="key"
+        app:title="Key"
+        app:summary="Use the same key across your devices (32 chars long)"/>
+
+    <ListPreference
+        app:key="protocol"
+        app:title="Protocol"
+        app:entries="@array/protocol"
+        app:entryValues="@array/protocol"
+        app:summary="Choose protocol (basic, frames)"/>
+
+    <EditTextPreference
+        app:key="host1"
+        app:title="Host 1"
+        app:defaultValue="224.0.0.89:8900"
+        app:summary="Where to send"/>
+
+    <EditTextPreference
+        app:key="host2"
+        app:title="Host 2"
+        app:summary="Where to send"/>
+
+    <EditTextPreference
+        app:key="host3"
+        app:title="Host 3"
+        app:summary="Where to send"/>
+
+</PreferenceScreen>

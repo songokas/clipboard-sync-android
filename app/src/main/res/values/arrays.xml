@@ -1,0 +1,8 @@
+<resources>
+
+    <string-array name="protocol">
+        <item>basic</item>
+        <item>frames</item>
+    </string-array>
+
+</resources>
