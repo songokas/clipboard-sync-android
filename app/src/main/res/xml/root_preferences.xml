@@ -15,6 +15,7 @@
     <ListPreference
         app:key="protocol"
         app:title="Protocol"
+        app:defaultValue="basic"
         app:entries="@array/protocol"
         app:entryValues="@array/protocol"
         app:summary="Choose protocol (basic, frames)"/>
