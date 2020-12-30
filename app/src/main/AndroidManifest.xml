@@ -3,6 +3,8 @@
     package="com.clipboard.sync">
 
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+
 
     <application
         android:allowBackup="true"
@@ -11,6 +13,10 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.ClipboardSync">
+
+        <service android:name=".SyncClipboardService"/>
+        <receiver android:name=".SyncActionReceiver" />
+
         <activity
             android:persistent="true"
             android:name=".MainActivity"

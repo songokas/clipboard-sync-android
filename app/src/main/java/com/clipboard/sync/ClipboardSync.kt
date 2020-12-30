@@ -8,9 +8,11 @@ class ClipboardSync {
         }
     }
 
-    external fun startSync(config: String): String;
+    external fun startSync(config: String, ): String;
 
     external fun stopSync(): String;
 
     external fun status(): String;
+
+    external fun queue(clipboard: String): String;
 }

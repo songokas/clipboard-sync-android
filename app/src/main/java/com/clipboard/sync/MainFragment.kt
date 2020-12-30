@@ -17,15 +17,11 @@ class MainFragment : Fragment() {
     private lateinit var toggleButton: SwitchCompat
     private lateinit var timerHandler: Handler
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        outState.putString("statusText", textView.text.toString())
-        outState.putBoolean("statusText", toggleButton.isChecked)
-    }
+//    override fun onSaveInstanceState(outState: Bundle) {
+//        super.onSaveInstanceState(outState)
+//        outState.putString("statusText", textView.text.toString())
+//        outState.putBoolean("statusText", toggleButton.isChecked)
+//    }
 
     override fun onCreateView(
             inflater: LayoutInflater, container: ViewGroup?,
@@ -38,16 +34,12 @@ class MainFragment : Fragment() {
         toggleButton = view.findViewById(R.id.toggle_button)
         val mainActivity = activity as MainActivity
 
-        if (savedInstanceState != null) {
-            textView.text = savedInstanceState.getString("statusText")
-            toggleButton.isChecked = savedInstanceState.getBoolean("buttonState", false)
-        }
 
         toggleButton.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 startLog()
             }
-            mainActivity.changeState(textView, isChecked)
+            mainActivity.changeState(textView, toggleButton)
         }
         return view
     }
@@ -57,9 +49,9 @@ class MainFragment : Fragment() {
         val runnable = object : Runnable {
             override fun run() {
                 textView.text = (activity as MainActivity).getStatus()
-                timerHandler.postDelayed(this, 6000)
+                timerHandler.postDelayed(this, 3000)
             }
         }
-        timerHandler.postDelayed(runnable, 6000)
+        timerHandler.postDelayed(runnable, 3000)
     }
 }
