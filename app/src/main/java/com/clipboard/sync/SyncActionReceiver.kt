@@ -9,12 +9,11 @@ import android.util.Log
 class SyncActionReceiver : BroadcastReceiver() {
     private var sync: ClipboardSync = ClipboardSync()
     override fun onReceive(context: Context, intent: Intent) {
-
         Log.d("receiver", "foreground running")
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val text = clipboard.primaryClip?.getItemAt(0)?.text
         if (!text.isNullOrEmpty()) {
-            Log.d("receiver", text.toString())
+            Log.d("receiver clipboard", text.toString())
             sync.queue(text.toString())
         }
         //This is used to close the notification tray

@@ -2,10 +2,7 @@ package com.clipboard.sync
 
 import android.R.attr.label
 import android.app.Service
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.content.Intent
+import android.content.*
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -20,18 +17,17 @@ import androidx.fragment.app.commit
 import androidx.preference.PreferenceManager
 import org.json.JSONArray
 import org.json.JSONObject
-
-
+import java.security.MessageDigest
 
 class MainActivity : AppCompatActivity() {
 
     private var sync: ClipboardSync = ClipboardSync()
-    private var last: String = ""
-//    private lateinit var timerHandler: Handler
+    private var currentHash: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
         if (savedInstanceState == null) {
 
             supportFragmentManager.commit {
@@ -56,89 +52,100 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    fun changeState(textView: TextView, buttonView: SwitchCompat)
+    fun sendClipboard(textView: TextView)
     {
-        if (buttonView.isChecked) {
-            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-            val json = JSONObject();
-            json.put("key", prefs.getString("key", null))
-            json.put("group", prefs.getString("group", null))
-            json.put("protocol", prefs.getString("protocol", null))
-            val arr = JSONArray()
-            if (prefs.getString("host1", "")!!.isNotEmpty()) {
-                arr.put(prefs.getString("host1", null))
-            }
-            if (prefs.getString("host2", "")!!.isNotEmpty()) {
-                arr.put(prefs.getString("host2", null))
-            }
-            if (prefs.getString("host3", "")!!.isNotEmpty()) {
-                arr.put(prefs.getString("host3", null))
-            }
-            json.put("hosts", arr)
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val text = clipboard.primaryClip?.getItemAt(0)?.text
+        if (text.isNullOrEmpty()) {
+            textView.text = resources.getString(R.string.empty_clipboard)
+            return;
+        }
 
+        Log.d("send clipboard once", text.toString())
+
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val json = prefsToJson(prefs)
+        val message = sync.send(json.toString(), text.toString())
+        textView.text = message
+    }
+
+    fun changeState(textView: TextView, isChecked: Boolean): Boolean
+    {
+        if (isChecked) {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+            val json = prefsToJson(prefs)
             val status = sync.startSync(json.toString())
             val jsonResult = JSONObject(status)
+
             textView.text = jsonResult.optString("message")
+
             if (!jsonResult.optBoolean("state")) {
-                buttonView.isChecked = false
-            } else {
+                return false
+            } else if (prefs.getBoolean("notification", false)) {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                     startForegroundService(Intent(applicationContext, SyncClipboardService::class.java))
                 }
             }
-
-//            startClipboardSend()
-
-//            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-//            clipboard.addPrimaryClipChangedListener {
-//                Log.d("clipboard changed")
-//                sync.queue(clipboard.primaryClip?.getItemAt(0)?.text.toString())
-//            }
-
-        } else {
-            val status = sync.stopSync()
-            val jsonResult = JSONObject(status)
-            textView.text = jsonResult.optString("message")
+            return true
         }
+
+        val status = sync.stopSync()
+        val jsonResult = JSONObject(status)
+        textView.text = jsonResult.optString("message")
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            stopService(Intent(applicationContext, SyncClipboardService::class.java))
+        }
+        return false
     }
 
-//    private fun startClipboardSend()
-//    {
-//        val runnable = object : Runnable {
-//            override fun run() {
-//                val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-//                val text = clipboard.primaryClip?.getItemAt(0)?.text.toString()
-//                sync.queue(text)
-//                timerHandler.postDelayed(this, 3000)
-//            }
-//        }
-//        timerHandler.postDelayed(runnable, 3000)
-//    }
-
-    fun getStatus(): String
+    fun processStatus(): Pair<String, Boolean>
     {
-        Log.d("status", "called")
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-
-
         val status = sync.status()
+
         val jsonResult = JSONObject(status)
         val clipboardStr = jsonResult.optString("clipboard");
 
         if (clipboardStr.isNotEmpty()) {
-            Log.d("status set", clipboardStr)
+            Log.d("set clipboard", clipboardStr)
             val clip = ClipData.newPlainText("simple text", clipboardStr)
             clipboard.setPrimaryClip(clip)
+            currentHash = hashString(clipboardStr)
         } else {
             val text = clipboard.primaryClip?.getItemAt(0)?.text
-            if (!text.isNullOrEmpty()) {
-                Log.d("status queue", text.toString())
+            if (!text.isNullOrEmpty() && currentHash != hashString(text.toString())) {
+                Log.d("add clipboard to queue", text.toString())
                 sync.queue(text.toString())
             }
         }
 
-        return jsonResult.getString("message")
+        return Pair(jsonResult.optString("message"), jsonResult.optBoolean("state", false))
     }
 
+    private fun hashString(input: String): String {
+        return MessageDigest
+                .getInstance("SHA1")
+                .digest(input.toByteArray())
+                .fold("", { str, it -> str + "%02x".format(it) })
+    }
 
+    private fun prefsToJson(prefs: SharedPreferences): JSONObject
+    {
+        val json = JSONObject();
+        json.put("key", prefs.getString("key", null))
+        json.put("group", prefs.getString("group", null))
+        json.put("protocol", prefs.getString("protocol", null))
+        val arr = JSONArray()
+        if (prefs.getString("host1", "")!!.isNotEmpty()) {
+            arr.put(prefs.getString("host1", null))
+        }
+        if (prefs.getString("host2", "")!!.isNotEmpty()) {
+            arr.put(prefs.getString("host2", null))
+        }
+        if (prefs.getString("host3", "")!!.isNotEmpty()) {
+            arr.put(prefs.getString("host3", null))
+        }
+        json.put("hosts", arr)
+        return json
+    }
 }

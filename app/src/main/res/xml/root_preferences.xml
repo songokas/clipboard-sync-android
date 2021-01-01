@@ -36,4 +36,9 @@
         app:title="Host 3"
         app:summary="Where to send"/>
 
+    <CheckBoxPreference
+        app:key="notification"
+        app:title="Paste everywhere"
+        app:summary="once started clipboard automatically updates"/>
 </PreferenceScreen>
+
