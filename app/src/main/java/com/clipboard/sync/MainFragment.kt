@@ -25,7 +25,7 @@ class MainFragment : Fragment() {
         val view = inflater.inflate(R.layout.main_fragment, container, false)
         textView = view.findViewById(R.id.text_view)
         toggleButton = view.findViewById(R.id.toggle_button)
-        val sendButton: Button = view.findViewById(R.id.send_button);
+        val sendButton: Button = view.findViewById(R.id.send_button)
 
         val mainActivity = activity as MainActivity
 

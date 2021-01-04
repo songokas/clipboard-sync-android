@@ -15,7 +15,7 @@ class MessageHelper {
 
     fun prefsToJson(prefs: SharedPreferences): JSONObject
     {
-        val json = JSONObject();
+        val json = JSONObject()
         json.put("key", prefs.getString("key", null))
         json.put("group", prefs.getString("group", null))
         json.put("protocol", prefs.getString("protocol", null))

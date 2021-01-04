@@ -59,7 +59,7 @@ class MainActivity : AppCompatActivity() {
         val text = clipboard.primaryClip?.getItemAt(0)?.text
         if (text.isNullOrEmpty()) {
             textView.text = resources.getString(R.string.empty_clipboard)
-            return;
+            return
         }
 
         Log.d("send clipboard once", text.toString())
@@ -68,6 +68,7 @@ class MainActivity : AppCompatActivity() {
         val json = helper.prefsToJson(prefs)
         val message = sync.send(json.toString(), text.toString())
         textView.text = message
+        currentHash = text.toString()
     }
 
     fun changeState(textView: TextView, isChecked: Boolean): Boolean
@@ -105,7 +106,7 @@ class MainActivity : AppCompatActivity() {
         val status = sync.status()
 
         val jsonResult = JSONObject(status)
-        val clipboardStr = jsonResult.optString("clipboard");
+        val clipboardStr = jsonResult.optString("clipboard")
 
         if (clipboardStr.isNotEmpty()) {
             Log.d("set clipboard", clipboardStr)
@@ -114,9 +115,13 @@ class MainActivity : AppCompatActivity() {
             currentHash = helper.hashString(clipboardStr)
         } else {
             val text = clipboard.primaryClip?.getItemAt(0)?.text
-            if (!text.isNullOrEmpty() && currentHash != helper.hashString(text.toString())) {
-                Log.d("add clipboard to queue", text.toString())
-                sync.queue(text.toString())
+            if (!text.isNullOrEmpty()) {
+                val expectedHash = helper.hashString(text.toString())
+                if (currentHash != expectedHash) {
+                    Log.d("add clipboard to queue", text.toString())
+                    sync.queue(text.toString())
+                    currentHash = expectedHash
+                }
             }
         }
 

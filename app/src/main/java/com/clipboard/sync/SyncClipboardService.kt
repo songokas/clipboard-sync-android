@@ -12,10 +12,10 @@ import androidx.core.app.NotificationCompat
 
 class SyncClipboardService: Service() {
 
-    val ONGOING_NOTIFICATION_ID = 232323;
+    val ONGOING_NOTIFICATION_ID = 232323
 
     override fun onBind(p0: Intent?): IBinder? {
-        return null;
+        return null
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

@@ -28,8 +28,8 @@ class SettingsActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         val id = item.itemId
         if (id == android.R.id.home) {
-            finish();
-            return true;
+            finish()
+            return true
         }
         return super.onOptionsItemSelected(item)
     }
