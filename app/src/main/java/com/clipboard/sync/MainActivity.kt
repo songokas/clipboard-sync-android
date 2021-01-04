@@ -23,6 +23,7 @@ class MainActivity : AppCompatActivity() {
 
     private var sync: ClipboardSync = ClipboardSync()
     private var currentHash: String = ""
+    private val helper: MessageHelper = MessageHelper()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,7 +65,7 @@ class MainActivity : AppCompatActivity() {
         Log.d("send clipboard once", text.toString())
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-        val json = prefsToJson(prefs)
+        val json = helper.prefsToJson(prefs)
         val message = sync.send(json.toString(), text.toString())
         textView.text = message
     }
@@ -73,7 +74,7 @@ class MainActivity : AppCompatActivity() {
     {
         if (isChecked) {
             val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-            val json = prefsToJson(prefs)
+            val json = helper.prefsToJson(prefs)
             val status = sync.startSync(json.toString())
             val jsonResult = JSONObject(status)
 
@@ -110,10 +111,10 @@ class MainActivity : AppCompatActivity() {
             Log.d("set clipboard", clipboardStr)
             val clip = ClipData.newPlainText("simple text", clipboardStr)
             clipboard.setPrimaryClip(clip)
-            currentHash = hashString(clipboardStr)
+            currentHash = helper.hashString(clipboardStr)
         } else {
             val text = clipboard.primaryClip?.getItemAt(0)?.text
-            if (!text.isNullOrEmpty() && currentHash != hashString(text.toString())) {
+            if (!text.isNullOrEmpty() && currentHash != helper.hashString(text.toString())) {
                 Log.d("add clipboard to queue", text.toString())
                 sync.queue(text.toString())
             }
@@ -122,30 +123,5 @@ class MainActivity : AppCompatActivity() {
         return Pair(jsonResult.optString("message"), jsonResult.optBoolean("state", false))
     }
 
-    private fun hashString(input: String): String {
-        return MessageDigest
-                .getInstance("SHA1")
-                .digest(input.toByteArray())
-                .fold("", { str, it -> str + "%02x".format(it) })
-    }
 
-    private fun prefsToJson(prefs: SharedPreferences): JSONObject
-    {
-        val json = JSONObject();
-        json.put("key", prefs.getString("key", null))
-        json.put("group", prefs.getString("group", null))
-        json.put("protocol", prefs.getString("protocol", null))
-        val arr = JSONArray()
-        if (prefs.getString("host1", "")!!.isNotEmpty()) {
-            arr.put(prefs.getString("host1", null))
-        }
-        if (prefs.getString("host2", "")!!.isNotEmpty()) {
-            arr.put(prefs.getString("host2", null))
-        }
-        if (prefs.getString("host3", "")!!.isNotEmpty()) {
-            arr.put(prefs.getString("host3", null))
-        }
-        json.put("hosts", arr)
-        return json
-    }
 }
