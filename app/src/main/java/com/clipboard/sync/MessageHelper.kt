@@ -30,6 +30,31 @@ class MessageHelper {
             arr.put(prefs.getString("host3", null))
         }
         json.put("hosts", arr)
+
+        val sendArr = JSONArray()
+        if (prefs.getString("sendAddress1", "")!!.isNotEmpty()) {
+            sendArr.put(prefs.getString("sendAddress1", null))
+        }
+        if (prefs.getString("sendAddress2", "")!!.isNotEmpty()) {
+            sendArr.put(prefs.getString("sendAddress2", null))
+        }
+        json.put("send_using_address", sendArr)
+
+        val bindArr = JSONArray()
+        if (prefs.getString("bindAddress1", "")!!.isNotEmpty()) {
+            bindArr.put(prefs.getString("bindAddress1", null))
+        }
+        json.put("bind_address", bindArr)
+        if (prefs.getString("visibleIp", "")!!.isNotEmpty()) {
+            json.put("visible_ip", prefs.getString("visibleIp", null))
+        }
+        val heartbeatStr = prefs.getString("heartbeat", "0")
+        val heartbeat = try {
+            heartbeatStr?.toInt()
+        } catch (e: NumberFormatException) {
+            0
+        }
+        json.put("heartbeat", heartbeat);
         return json
     }
 }

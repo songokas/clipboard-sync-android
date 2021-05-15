@@ -1,23 +1,20 @@
 package com.clipboard.sync
 
-import android.R.attr.label
-import android.app.Service
-import android.content.*
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.add
 import androidx.fragment.app.commit
 import androidx.preference.PreferenceManager
-import org.json.JSONArray
 import org.json.JSONObject
-import java.security.MessageDigest
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -64,7 +61,9 @@ class MainActivity : AppCompatActivity() {
 
         Log.d("send clipboard once", text.toString())
 
-        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val prefs = PreferenceManager.getDefaultSharedPreferences(
+            applicationContext
+        )
         val json = helper.prefsToJson(prefs)
         val message = sync.send(json.toString(), text.toString())
         textView.text = message
@@ -74,7 +73,9 @@ class MainActivity : AppCompatActivity() {
     fun changeState(textView: TextView, isChecked: Boolean): Boolean
     {
         if (isChecked) {
-            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+            val prefs = PreferenceManager.getDefaultSharedPreferences(
+                applicationContext
+            )
             val json = helper.prefsToJson(prefs)
             val status = sync.startSync(json.toString())
             val jsonResult = JSONObject(status)
@@ -85,7 +86,12 @@ class MainActivity : AppCompatActivity() {
                 return false
             } else if (prefs.getBoolean("notification", false)) {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    startForegroundService(Intent(applicationContext, SyncClipboardService::class.java))
+                    startForegroundService(
+                        Intent(
+                            applicationContext,
+                            SyncClipboardService::class.java
+                        )
+                    )
                 }
             }
             return true
@@ -109,7 +115,7 @@ class MainActivity : AppCompatActivity() {
         val clipboardStr = jsonResult.optString("clipboard")
 
         if (clipboardStr.isNotEmpty()) {
-            Log.d("set clipboard", clipboardStr)
+//            Log.d("set clipboard", clipboardStr)
             val clip = ClipData.newPlainText("simple text", clipboardStr)
             clipboard.setPrimaryClip(clip)
             currentHash = helper.hashString(clipboardStr)
@@ -118,7 +124,7 @@ class MainActivity : AppCompatActivity() {
             if (!text.isNullOrEmpty()) {
                 val expectedHash = helper.hashString(text.toString())
                 if (currentHash != expectedHash) {
-                    Log.d("add clipboard to queue", text.toString())
+//                    Log.d("add clipboard to queue", text.toString())
                     sync.queue(text.toString())
                     currentHash = expectedHash
                 }

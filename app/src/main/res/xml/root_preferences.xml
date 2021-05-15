@@ -18,7 +18,7 @@
         app:defaultValue="basic"
         app:entries="@array/protocol"
         app:entryValues="@array/protocol"
-        app:summary="Choose protocol (basic, frames)"/>
+        app:summary="Choose protocol (basic, frames, laminar)"/>
 
     <EditTextPreference
         app:key="host1"
@@ -35,6 +35,34 @@
         app:key="host3"
         app:title="Host 3"
         app:summary="Where to send"/>
+
+    <EditTextPreference
+        app:key="visibleIp"
+        app:title="Public ip"
+        app:summary="Override public ip, ip presented after nat"/>
+
+    <EditTextPreference
+        app:key="sendAddress1"
+        app:title="Send using address"
+        app:defaultValue="0.0.0.0:0"
+        app:summary="Use address and port to send"/>
+
+    <EditTextPreference
+        app:key="sendAddress2"
+        app:title="Send using address"
+        app:defaultValue="[::]:0"
+        app:summary="Use address and port to send"/>
+
+    <EditTextPreference
+        app:key="bindAddress1"
+        app:title="Bind address"
+        app:defaultValue="0.0.0.0:0"
+        app:summary="Bind to local address"/>
+
+    <EditTextPreference
+        app:key="heartbeat"
+        app:title="Keep alive"
+        app:summary="Keep nat mapping alive in seconds" />
 
     <CheckBoxPreference
         app:key="notification"

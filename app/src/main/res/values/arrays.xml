@@ -3,6 +3,7 @@
     <string-array name="protocol">
         <item>basic</item>
         <item>frames</item>
+        <item>laminar</item>
     </string-array>
 
 </resources>

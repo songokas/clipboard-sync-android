@@ -31,7 +31,6 @@ class SyncClipboardService: Service() {
                 Intent(this, MainActivity::class.java).let { notificationIntent ->
                     notificationIntent.action = Intent.ACTION_MAIN
                     notificationIntent.addCategory(Intent.CATEGORY_LAUNCHER)
-//                    PendingIntent.getBroadcast(this,1, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT)
                     PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT)
                 }
 
