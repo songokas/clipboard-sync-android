@@ -4,6 +4,7 @@
         <item>basic</item>
         <item>frames</item>
         <item>laminar</item>
+        <item>tcp</item>
     </string-array>
 
 </resources>

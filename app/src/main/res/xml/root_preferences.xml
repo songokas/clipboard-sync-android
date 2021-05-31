@@ -18,7 +18,7 @@
         app:defaultValue="basic"
         app:entries="@array/protocol"
         app:entryValues="@array/protocol"
-        app:summary="Choose protocol (basic, frames, laminar)"/>
+        app:summary="Choose protocol (basic, frames, laminar, tcp)"/>
 
     <EditTextPreference
         app:key="host1"
@@ -56,7 +56,7 @@
     <EditTextPreference
         app:key="bindAddress1"
         app:title="Bind address"
-        app:defaultValue="0.0.0.0:0"
+        app:defaultValue="0.0.0.0:8900"
         app:summary="Bind to local address"/>
 
     <EditTextPreference
