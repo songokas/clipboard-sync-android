@@ -50,7 +50,7 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    fun sendClipboard(textView: TextView)
+    fun sendClipboard(textView: TextView, running: Boolean)
     {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val text = clipboard.primaryClip?.getItemAt(0)?.text
@@ -60,6 +60,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         Log.d("send clipboard once", text.toString())
+
+        if (running) {
+            sync.queue(text.toString())
+            currentHash = text.toString()
+            return
+        }
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(
             applicationContext

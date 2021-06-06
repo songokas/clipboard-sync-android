@@ -40,7 +40,7 @@ class MainFragment : Fragment() {
         }
 
         sendButton.setOnClickListener {
-            mainActivity.sendClipboard(textView)
+            mainActivity.sendClipboard(textView, toggleButton.isChecked)
         }
 
         return view
