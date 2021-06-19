@@ -1,5 +1,7 @@
 package com.clipboard.sync
 
+import android.content.ClipboardManager
+import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -7,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.Fragment
@@ -21,11 +24,13 @@ class MainFragment : Fragment() {
             savedInstanceState: Bundle?
     ): View? {
 
+
         timerHandler = Handler(Looper.getMainLooper())
         val view = inflater.inflate(R.layout.main_fragment, container, false)
         textView = view.findViewById(R.id.text_view)
         toggleButton = view.findViewById(R.id.toggle_button)
         val sendButton: Button = view.findViewById(R.id.send_button)
+        val editInput: EditText = view.findViewById(R.id.copy_input)
 
         val mainActivity = activity as MainActivity
 
@@ -40,9 +45,9 @@ class MainFragment : Fragment() {
         }
 
         sendButton.setOnClickListener {
-            mainActivity.sendClipboard(textView, toggleButton.isChecked)
+            mainActivity.sendClipboard(textView, toggleButton.isChecked, editInput.text.toString())
+            editInput.setText("")
         }
-
         return view
     }
 

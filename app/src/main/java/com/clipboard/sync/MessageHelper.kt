@@ -55,6 +55,16 @@ class MessageHelper {
             0
         }
         json.put("heartbeat", heartbeat);
+        val relay = JSONObject()
+        if (prefs.getString("relayServer", "")!!.isNotEmpty()) {
+            relay.put("host", prefs.getString("relayServer", null))
+        }
+        if (prefs.getString("relayPublicKey", "")!!.isNotEmpty()) {
+            relay.put("public_key", prefs.getString("relayPublicKey", null))
+        }
+        if (relay.length() > 1) {
+            json.put("relay", relay)
+        }
         return json
     }
 }

@@ -50,10 +50,10 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    fun sendClipboard(textView: TextView, running: Boolean)
+    fun sendClipboard(textView: TextView, running: Boolean, textToUse: String)
     {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val text = clipboard.primaryClip?.getItemAt(0)?.text
+        val text = if (textToUse.isNotEmpty()) textToUse else clipboard.primaryClip?.getItemAt(0)?.text
         if (text.isNullOrEmpty()) {
             textView.text = resources.getString(R.string.empty_clipboard)
             return

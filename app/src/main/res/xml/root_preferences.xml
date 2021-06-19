@@ -68,5 +68,17 @@
         app:key="notification"
         app:title="Paste everywhere"
         app:summary="once started clipboard automatically updates"/>
+
+    <EditTextPreference
+        app:key="relayServer"
+        app:title="Relay server"
+        app:defaultValue="clipsync.net:8900"
+        app:summary="Use relay server. Set host to the same value in order to use it"/>
+
+    <EditTextPreference
+        app:key="relayPublicKey"
+        app:title="Relay public key"
+        app:defaultValue="xskF0Ihe1s9gjIjw4VvL86FN8YkA3UHMjBzajRspwns="
+        app:summary="Relay servers public key"/>
 </PreferenceScreen>
 

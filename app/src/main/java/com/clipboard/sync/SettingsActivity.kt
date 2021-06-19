@@ -170,6 +170,14 @@ class SettingsActivity : AppCompatActivity() {
             heartbeat!!.setOnBindEditTextListener { editText ->
                 editText.inputType = InputType.TYPE_CLASS_NUMBER
             }
+
+            val relay =
+                preferenceScreen.findPreference<Preference>("relayServer") as EditTextPreference?
+
+            relay!!.setOnBindEditTextListener { editText ->
+                editText.inputType = InputType.TYPE_TEXT_VARIATION_URI
+                editText.addTextChangedListener(ButtonValidation(editText, socketValidationOptional))
+            }
         }
     }
 }

@@ -23,7 +23,8 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/text_view" />
+        app:layout_constraintTop_toBottomOf="@id/text_view"
+        />
 
     <Button
         android:id="@+id/send_button"
@@ -33,8 +34,20 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toggle_button" />
+        app:layout_constraintTop_toBottomOf="@id/toggle_button"
+        />
 
+    <EditText
+        android:id="@+id/copy_input"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="@string/edit_input_hint"
+        android:inputType="text"
+        android:padding="15dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/send_button" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

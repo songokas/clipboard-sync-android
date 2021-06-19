@@ -5,6 +5,9 @@
     <!-- Strings used for fragments for navigation -->
     <string name="main_fragment_label">Main</string>
     <string name="hello_first_fragment">Start application</string>
-    <string name="send_button_text">Just send that shit!</string>
+    <string name="send_button_text">Just send it!</string>
+    <string name="copy_and_send_button_text">Copy &amp; Send</string>
     <string name="empty_clipboard">Empty clipboard</string>
+    <string name="edit_input_hint">Enter text to send</string>
+
 </resources>
