@@ -1,9 +1,15 @@
 package com.clipboard.sync
 
+import android.content.ContentResolver
 import android.content.SharedPreferences
+import android.database.Cursor
+import android.net.Uri
+import android.provider.OpenableColumns
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.security.MessageDigest
+
 
 class MessageHelper {
     fun hashString(input: String): String {
@@ -13,8 +19,7 @@ class MessageHelper {
             .fold("", { str, it -> str + "%02x".format(it) })
     }
 
-    fun prefsToJson(prefs: SharedPreferences): JSONObject
-    {
+    fun prefsToJson(prefs: SharedPreferences, appDir: File): JSONObject {
         val json = JSONObject()
         json.put("key", prefs.getString("key", null))
         json.put("group", prefs.getString("group", null))
@@ -65,6 +70,31 @@ class MessageHelper {
         if (relay.length() > 1) {
             json.put("relay", relay)
         }
+        if (!appDir.exists()) {
+            appDir.mkdir()
+        }
+        json.put("app_dir", appDir.absolutePath)
+
         return json
+    }
+
+    fun getFileName(resolver: ContentResolver, uri: Uri): String? {
+        var result: String? = null
+        if (uri.scheme.equals("content")) {
+            val maybeCursor: Cursor? = resolver.query(uri, null, null, null, null)
+            maybeCursor.use { cursor ->
+                if (cursor != null && cursor.moveToFirst()) {
+                    result = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME))
+                }
+            }
+        }
+        if (result == null) {
+            result = uri.path
+            val cut = result!!.lastIndexOf('/')
+            if (cut != -1) {
+                result = result!!.substring(cut + 1)
+            }
+        }
+        return result
     }
 }

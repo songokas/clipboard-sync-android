@@ -79,6 +79,12 @@
         app:key="relayPublicKey"
         app:title="Relay public key"
         app:defaultValue="xskF0Ihe1s9gjIjw4VvL86FN8YkA3UHMjBzajRspwns="
-        app:summary="Relay servers public key"/>
+        app:summary="Relay servers public key in base64"/>
+
+    <CheckBoxPreference
+        app:key="useSharedDirectory"
+        app:title="Use shared directory"
+        app:summary="Save files in this directory"/>
+
 </PreferenceScreen>
 

@@ -1,70 +1,92 @@
 package com.clipboard.sync
 
-import android.content.ClipboardManager
-import android.content.Context
+import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
+import androidx.annotation.RequiresApi
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Observer
+import androidx.preference.PreferenceManager
+
 
 class MainFragment : Fragment() {
-    private lateinit var textView: TextView
-    private lateinit var toggleButton: SwitchCompat
-    private lateinit var timerHandler: Handler
+    private val viewModel: SyncViewModel by activityViewModels()
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreateView(
-            inflater: LayoutInflater, container: ViewGroup?,
-            savedInstanceState: Bundle?
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
     ): View? {
 
-
-        timerHandler = Handler(Looper.getMainLooper())
         val view = inflater.inflate(R.layout.main_fragment, container, false)
-        textView = view.findViewById(R.id.text_view)
-        toggleButton = view.findViewById(R.id.toggle_button)
+        val textView: TextView = view.findViewById(R.id.text_view)
+        val toggleButton: SwitchCompat = view.findViewById(R.id.toggle_button)
+        val saveButton: Button = view.findViewById(R.id.save_button)
         val sendButton: Button = view.findViewById(R.id.send_button)
         val editInput: EditText = view.findViewById(R.id.copy_input)
 
-        val mainActivity = activity as MainActivity
+        val prefs = PreferenceManager.getDefaultSharedPreferences(
+            requireContext()
+        )
+        val fileCount = 0
+
+        val updateButton = { count: Int ->
+            val usingFileSaves = !prefs.getBoolean("useSharedDirectory", false);
+            if (usingFileSaves) {
+                saveButton.text = getString(R.string.save_files_button_text, count)
+                saveButton.isEnabled = true
+            } else {
+                saveButton.text = getString(R.string.received_files_button_text, count)
+                saveButton.isEnabled = false
+            }
+        }
+
+        updateButton(fileCount)
+
+        viewModel.textChanges.observe(viewLifecycleOwner, Observer { message ->
+            textView.text = message
+        })
+
+        viewModel.fileCountChanges.observe(viewLifecycleOwner, Observer { count ->
+            updateButton(count)
+        })
 
         toggleButton.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                processUpdates()
+            activity?.let {
+                val act = it as MainActivity
+                val success = viewModel.changeState(act, isChecked)
+                if (success != isChecked) {
+                    toggleButton.isChecked = success
+                }
+                act.userStarted = success
+                if (success) {
+                    act.processUpdates(act)
+                }
             }
-            val success = mainActivity.changeState(textView, isChecked)
-            if (success != isChecked) {
-                toggleButton.isChecked = success
+        }
+
+        saveButton.setOnClickListener {
+            activity?.let {
+                if (!prefs.getBoolean("useSharedDirectory", false)) {
+                    viewModel.moveAllFiles(it as AppCompatActivity)
+                }
             }
         }
 
         sendButton.setOnClickListener {
-            mainActivity.sendClipboard(textView, toggleButton.isChecked, editInput.text.toString())
-            editInput.setText("")
-        }
-        return view
-    }
-
-    private fun processUpdates()
-    {
-        val runnable = object : Runnable {
-            override fun run() {
-                val pair = (activity as MainActivity).processStatus()
-                textView.text = pair.first
-                if (pair.second != toggleButton.isChecked) {
-                    toggleButton.isChecked = pair.second
-                }
-                if (toggleButton.isChecked) {
-                    timerHandler.postDelayed(this, 3000)
-                }
+            activity?.let {
+                viewModel.sendClipboard(it, editInput.text.toString())
+                editInput.setText("")
             }
         }
-        timerHandler.postDelayed(runnable, 3000)
+        return view
     }
 }

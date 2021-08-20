@@ -1,6 +1,7 @@
 package com.clipboard.sync
 
-import android.R.string
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputFilter
@@ -12,14 +13,12 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.EditText
 import androidx.appcompat.app.AppCompatActivity
+import androidx.preference.CheckBoxPreference
 import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
-import java.net.InetAddress
 import java.net.URI
 import java.net.URISyntaxException
-import java.net.UnknownHostException
-
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -48,6 +47,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         return super.onOptionsItemSelected(item)
     }
+
 
     class ButtonValidation(
         val editText: EditText,
@@ -130,7 +130,12 @@ class SettingsActivity : AppCompatActivity() {
 
             host2!!.setOnBindEditTextListener { editText ->
                 editText.inputType = InputType.TYPE_TEXT_VARIATION_URI
-                editText.addTextChangedListener(ButtonValidation(editText, socketValidationOptional))
+                editText.addTextChangedListener(
+                    ButtonValidation(
+                        editText,
+                        socketValidationOptional
+                    )
+                )
             }
 
             val host3 =
@@ -138,7 +143,12 @@ class SettingsActivity : AppCompatActivity() {
 
             host3!!.setOnBindEditTextListener { editText ->
                 editText.inputType = InputType.TYPE_TEXT_VARIATION_URI
-                editText.addTextChangedListener(ButtonValidation(editText, socketValidationOptional))
+                editText.addTextChangedListener(
+                    ButtonValidation(
+                        editText,
+                        socketValidationOptional
+                    )
+                )
             }
 
             val publicIp =
@@ -161,7 +171,12 @@ class SettingsActivity : AppCompatActivity() {
 
             sendAddress2!!.setOnBindEditTextListener { editText ->
                 editText.inputType = InputType.TYPE_TEXT_VARIATION_URI
-                editText.addTextChangedListener(ButtonValidation(editText, socketValidationOptional))
+                editText.addTextChangedListener(
+                    ButtonValidation(
+                        editText,
+                        socketValidationOptional
+                    )
+                )
             }
 
             val heartbeat =
@@ -176,8 +191,64 @@ class SettingsActivity : AppCompatActivity() {
 
             relay!!.setOnBindEditTextListener { editText ->
                 editText.inputType = InputType.TYPE_TEXT_VARIATION_URI
-                editText.addTextChangedListener(ButtonValidation(editText, socketValidationOptional))
+                editText.addTextChangedListener(
+                    ButtonValidation(
+                        editText,
+                        socketValidationOptional
+                    )
+                )
+            }
+
+            val useShared =
+                preferenceScreen.findPreference<Preference>("useSharedDirectory") as CheckBoxPreference?
+            useShared!!.setOnPreferenceChangeListener { _, value ->
+                if (value as Boolean) {
+                    releaseStoragePermissions()
+                    openDirectory()
+                }
+                true
             }
         }
+
+        override fun onActivityResult(
+            requestCode: Int, resultCode: Int, resultData: Intent?
+        ) {
+            super.onActivityResult(requestCode, resultCode, resultData)
+            if (requestCode == Config.SAVE_FILES_INTENT) {
+                if (resultCode == Activity.RESULT_OK) {
+                    resultData?.data?.also { uri ->
+                        val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                        activity?.applicationContext?.contentResolver?.takePersistableUriPermission(
+                            uri,
+                            takeFlags
+                        )
+                    }
+                } else {
+                    val useShared =
+                        preferenceScreen.findPreference<Preference>("useSharedDirectory") as CheckBoxPreference?
+                    useShared?.isChecked = false
+                }
+            }
+        }
+
+        private fun releaseStoragePermissions() {
+            for (perm in activity?.contentResolver?.persistedUriPermissions.orEmpty()) {
+                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                activity?.contentResolver?.releasePersistableUriPermission(
+                    perm.uri,
+                    takeFlags
+                )
+            }
+        }
+
+        private fun openDirectory() {
+            startActivityForResult(
+                Intent(Intent.ACTION_OPEN_DOCUMENT_TREE),
+                Config.SAVE_FILES_INTENT
+            )
+        }
     }
+
 }
