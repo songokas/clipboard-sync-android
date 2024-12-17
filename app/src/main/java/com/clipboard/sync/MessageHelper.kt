@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.database.Cursor
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -24,17 +25,23 @@ class MessageHelper {
         json.put("key", prefs.getString("key", null))
         json.put("group", prefs.getString("group", null))
         json.put("protocol", prefs.getString("protocol", null))
-        val arr = JSONArray()
-        if (prefs.getString("host1", "")!!.isNotEmpty()) {
-            arr.put(prefs.getString("host1", null))
+        val allHosts = JSONObject()
+        val addr1 = prefs.getString("host1", "").orEmpty()
+        if (addr1.isNotEmpty()) {
+            val hosts = addr1.split('=', limit = 1);
+            allHosts.put(hosts[0], hosts.getOrNull(1) ?: JSONObject.NULL)
         }
-        if (prefs.getString("host2", "")!!.isNotEmpty()) {
-            arr.put(prefs.getString("host2", null))
+        val addr2 = prefs.getString("host2", "").orEmpty()
+        if (addr2.isNotEmpty()) {
+            val hosts = addr2.split('=', limit = 1);
+            allHosts.put(hosts[0], hosts.getOrNull(1) ?: JSONObject.NULL)
         }
-        if (prefs.getString("host3", "")!!.isNotEmpty()) {
-            arr.put(prefs.getString("host3", null))
+        val addr3 = prefs.getString("host3", "").orEmpty()
+        if (addr3.isNotEmpty()) {
+            val hosts = addr3.split('=', limit = 1);
+            allHosts.put(hosts[0], hosts.getOrNull(1) ?: JSONObject.NULL)
         }
-        json.put("hosts", arr)
+        json.put("hosts", allHosts)
 
         val sendArr = JSONArray()
         if (prefs.getString("sendAddress1", "")!!.isNotEmpty()) {
@@ -54,12 +61,12 @@ class MessageHelper {
             json.put("visible_ip", prefs.getString("visibleIp", null))
         }
         val heartbeatStr = prefs.getString("heartbeat", "0")
-        val heartbeat = try {
-            heartbeatStr?.toInt()
+        try {
+            val heartbeat = heartbeatStr?.toInt()
+            json.put("heartbeat", heartbeat);
+
         } catch (e: NumberFormatException) {
-            0
         }
-        json.put("heartbeat", heartbeat);
         val relay = JSONObject()
         if (prefs.getString("relayServer", "")!!.isNotEmpty()) {
             relay.put("host", prefs.getString("relayServer", null))
@@ -75,6 +82,16 @@ class MessageHelper {
         }
         json.put("app_dir", appDir.absolutePath)
 
+        if (prefs.getString("privateKey", "")!!.isNotEmpty()) {
+            json.put("private_key", prefs.getString("privateKey", null))
+        }
+        if (prefs.getString("certificateChain", "")!!.isNotEmpty()) {
+            json.put("certificate_chain", prefs.getString("certificateChain", null))
+        }
+        if (prefs.getString("remoteCertificates", "")!!.isNotEmpty()) {
+            json.put("remote_certificates", prefs.getString("remoteCertificates", null))
+        }
+
         return json
     }
 
@@ -84,7 +101,8 @@ class MessageHelper {
             val maybeCursor: Cursor? = resolver.query(uri, null, null, null, null)
             maybeCursor.use { cursor ->
                 if (cursor != null && cursor.moveToFirst()) {
-                    result = cursor.getString(cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME))
+                    val columnIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    result = cursor.getString(columnIndex)
                 }
             }
         }

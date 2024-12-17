@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ClipboardSync</string>
+    <string name="app_name">Clipboard Sync</string>
 
     <string name="action_settings">Settings</string>
     <!-- Strings used for fragments for navigation -->

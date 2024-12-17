@@ -2,6 +2,7 @@ package com.clipboard.sync
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputFilter
@@ -12,7 +13,9 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.EditText
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.preference.CheckBoxPreference
 import androidx.preference.EditTextPreference
 import androidx.preference.Preference
@@ -20,7 +23,9 @@ import androidx.preference.PreferenceFragmentCompat
 import java.net.URI
 import java.net.URISyntaxException
 
+
 class SettingsActivity : AppCompatActivity() {
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,6 +83,11 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     class SettingsFragment : PreferenceFragmentCompat() {
+
+        private val selectFile = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+            // Handle the returned Uri
+        }
+
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.root_preferences, rootKey)
 
@@ -110,7 +120,7 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             val socketValidationOptional = { editable: Editable ->
-                if (editable.count() == 0) {
+                if (editable.isEmpty()) {
                     null
                 } else {
                     socketValidation(editable)
@@ -208,6 +218,31 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 true
             }
+
+            val privateKey =
+                preferenceScreen.findPreference<Preference>("privateKey") as EditTextPreference?
+
+            privateKey!!.setOnBindEditTextListener { editText ->
+                editText.setLines(7)
+            }
+
+            val publicKey =
+                preferenceScreen.findPreference<Preference>("certificateChain") as EditTextPreference?
+
+            publicKey!!.setOnBindEditTextListener { editText ->
+                editText.setLines(7)
+            }
+
+            val certificates =
+                preferenceScreen.findPreference<Preference>("remoteCertificates") as EditTextPreference?
+
+            certificates!!.setOnBindEditTextListener { editText ->
+                editText.setLines(7)
+            }
+//            certificates.setOnPreferenceClickListener { _ ->
+//                selectFile.launch("*/*")
+//                true
+//            }
         }
 
         override fun onActivityResult(
@@ -252,3 +287,10 @@ class SettingsActivity : AppCompatActivity() {
     }
 
 }
+
+//private fun showFileChooser() {
+//    var chooseFile = Intent(Intent.ACTION_GET_CONTENT)
+//    chooseFile.setType("*/*")
+//    chooseFile = Intent.createChooser(chooseFile, "Choose a file")
+//    startActivityForResult(chooseFile, PICKFILE_RESULT_CODE)
+//}

@@ -18,9 +18,9 @@ class ClipboardSync {
 
     external fun isRunning(): Boolean
 
-    external fun send(config: String, clipboard: ByteBuffer, messageType: String): String
+    external fun send(config: String, clipboard: ByteArray, messageType: String): String
 
     external fun receive(): String
 
-    external fun queue(clipboard: ByteBuffer, messageType: String): String
+    external fun queue(clipboard: ByteArray, messageType: String): String
 }

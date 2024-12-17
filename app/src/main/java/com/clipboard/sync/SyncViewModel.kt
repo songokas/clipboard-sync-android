@@ -129,7 +129,7 @@ class SyncViewModel : ViewModel() {
 
     fun moveAllFiles(context: AppCompatActivity) {
         val fileUris = getAllFiles(context, context.filesDir)
-        if (fileUris.count() > 0) {
+        if (fileUris.isNotEmpty()) {
             saveFilesTo(context, fileUris)
         }
     }
@@ -305,20 +305,14 @@ class SyncViewModel : ViewModel() {
     }
 
     private suspend fun queueTextBuffer(text: String): String = withContext(Dispatchers.IO) {
-        val arr = text.toByteArray()
-        val buffer = ByteBuffer.allocateDirect(arr.size)
-        buffer.put(arr)
-        sync.queue(buffer, "text")
+        sync.queue(text.toByteArray(), "text")
     }
 
     private suspend fun sendTextBuffer(
         json: String,
         text: String,
     ): String = withContext(Dispatchers.IO) {
-        val arr = text.toByteArray()
-        val buffer = ByteBuffer.allocateDirect(arr.size)
-        buffer.put(arr)
-        sync.send(json, buffer, "text")
+        sync.send(json, text.toByteArray(), "text")
     }
 
     private suspend fun sendFile(
@@ -332,12 +326,10 @@ class SyncViewModel : ViewModel() {
         val arr = inputStream.readBytes()
         inputStream.close()
 
-        val buffer = ByteBuffer.allocateDirect(arr.size)
-        buffer.put(arr)
         if (sync.isRunning()) {
-            sync.queue(buffer, fileName)
+            sync.queue(arr, fileName)
         } else {
-            sync.send(createJson(context), buffer, fileName)
+            sync.send(createJson(context), arr, fileName)
         }
     }
 

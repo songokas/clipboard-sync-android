@@ -1,5 +1,5 @@
 <PreferenceScreen
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto" >
 
     <EditTextPreference
         app:key="group"
@@ -18,7 +18,7 @@
         app:defaultValue="basic"
         app:entries="@array/protocol"
         app:entryValues="@array/protocol"
-        app:summary="Choose protocol (basic, frames, laminar, tcp)"/>
+        app:summary="Choose protocol (basic, tcp, laminar, quic)"/>
 
     <EditTextPreference
         app:key="host1"
@@ -38,7 +38,7 @@
 
     <EditTextPreference
         app:key="visibleIp"
-        app:title="Public ip"
+        app:title="Your public ip"
         app:summary="Override public ip, ip presented after nat"/>
 
     <EditTextPreference
@@ -85,6 +85,19 @@
         app:key="useSharedDirectory"
         app:title="Use shared directory"
         app:summary="Save files in this directory"/>
+
+    <EditTextPreference
+        app:key="privateKey"
+        app:title="Private Key"
+        app:summary="Tls private key"/>
+    <EditTextPreference
+        app:key="certificateChain"
+        app:title="Certificate"
+        app:summary="x509 certificate"/>
+    <EditTextPreference
+        app:key="remoteCertificates"
+        app:title="Remote certificates"
+        app:summary="Allowed remote certificates" />
 
 </PreferenceScreen>
 
