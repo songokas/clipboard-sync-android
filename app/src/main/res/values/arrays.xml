@@ -2,7 +2,7 @@
     <string-array name="protocol">
         <item>basic</item>
         <item>tcp</item>
-        <item>laminar</item>
+        <item>tcp-tls</item>
         <item>quic</item>
     </string-array>
 </resources>
