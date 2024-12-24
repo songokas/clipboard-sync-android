@@ -11,8 +11,11 @@ import android.os.Parcelable
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Switch
+import android.widget.ToggleButton
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.add
 import androidx.fragment.app.commit
 import kotlinx.coroutines.MainScope
@@ -41,11 +44,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        Log.d(
-            "stop activity",
-            viewModel.isRunning().toString() + " " + viewModel.isServiceRunning()
-                .toString() + " " + userStarted
-        )
+        Log.d("stop activity", "running=${viewModel.isRunning()} started_by_user=$userStarted service_running=${viewModel.isServiceRunning()}")
         if (userStarted && !viewModel.isServiceRunning()) {
             viewModel.stopSync()
         }
@@ -53,7 +52,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onRestart() {
         super.onRestart()
-        Log.d("restart activity", viewModel.isRunning().toString() + " " + userStarted.toString())
+        Log.d("restart activity", "running=${viewModel.isRunning()} started_by_user=$userStarted")
         if (userStarted && !viewModel.isRunning()) {
             if (viewModel.changeState(this, true)) {
                 processUpdates(this)
@@ -87,34 +86,11 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-//    override fun onActivityResult(
-//        requestCode: Int, resultCode: Int, resultData: Intent?
-//    ) {
-//        super.onActivityResult(requestCode, resultCode, resultData)
-//        Log.d("activity", "received $requestCode $resultCode")
-//        if (requestCode == Config.MOVE_FILES_INTENT) {
-//            //@TODO remove only moved files
-//            for (uri in viewModel.getAllFiles(this, filesDir)) {
-//                Log.d("activity", "remove $uri")
-//                try {
-//                    contentResolver.delete(uri, null, null)
-//                } catch (e: IllegalArgumentException) {
-//                    Log.e("activity", "failed to remove file ${e.message}")
-//                }
-//            }
-//            viewModel.updateFileCount(0)
-//        }
-//    }
-
     fun processUpdates(context: Context) {
         val runnable = object : Runnable {
             override fun run() {
-                if (userStarted) {
-                    if (viewModel.processStatus(context)) {
-                        timerHandler.postDelayed(this, 3000)
-                    } else {
-                        viewModel.changeState(context, start = false)
-                    }
+                if (viewModel.processStatus(context)) {
+                    timerHandler.postDelayed(this, 3000)
                 }
             }
         }

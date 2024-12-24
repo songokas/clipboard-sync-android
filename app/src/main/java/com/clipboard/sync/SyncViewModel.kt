@@ -17,6 +17,7 @@ import java.io.File
 import java.util.HashMap
 
 data class Certificates(val privateKey: String, val certificateChain: String, val subject: String?)
+data class StatusCount(val sent: Int, val received: Int)
 
 class SyncViewModel : ViewModel() {
 
@@ -26,8 +27,11 @@ class SyncViewModel : ViewModel() {
     private val lastText = MutableLiveData<String>()
     val textChanges: LiveData<String> get() = lastText
 
+    private val statusCount = MutableLiveData<StatusCount>()
+    val statusCountChanges: LiveData<StatusCount> get() = statusCount
+
     private val fileCount = MutableLiveData<Int>()
-//    val fileCountChanges: LiveData<Int> get() = fileCount
+    val fileCountChanges: LiveData<Int> get() = fileCount
 
     private var serviceRunning: Boolean = false
     private var lastHash: String = ""
@@ -35,10 +39,16 @@ class SyncViewModel : ViewModel() {
     private var receiveCertificate: Boolean = false
 
     fun updateText(text: String) {
-        lastText.value = text
+        if (text.isNotEmpty()) {
+            lastText.value = text
+        }
     }
 
-    fun updateFileCount(count: Int) {
+    private fun updateStatusCount(sent: Int, received: Int) {
+        statusCount.value = StatusCount(sent, received)
+    }
+
+    private fun updateFileCount(count: Int) {
         fileCount.value = count
     }
 
@@ -78,11 +88,12 @@ class SyncViewModel : ViewModel() {
             val clip = ClipData.newPlainText("simple text", textToUse)
             clipboard.setPrimaryClip(clip)
         }
+
         val clipItem = clipboard.primaryClip?.getItemAt(0)
         val clipItemText = clipItem?.coerceToText(context)
         if (clipItem == null || clipItemText.isNullOrEmpty()) {
-            val status = context.resources.getString(R.string.empty_clipboard)
-            updateText(status)
+//            val status = context.resources.getString(R.string.empty_clipboard)
+//            updateText(status)
             return
         }
 
@@ -147,15 +158,7 @@ class SyncViewModel : ViewModel() {
         }
     }
 
-//    fun moveAllFiles(context: AppCompatActivity) {
-//        val fileUris = getAllFiles(context, context.filesDir)
-//        if (fileUris.isNotEmpty()) {
-//            saveFilesTo(context, fileUris)
-//        }
-//    }
-
     fun processStatus(context: Context): Boolean {
-        val clipboard = context.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
         val statusStr = sync.status()
         val jsonResult = try {
             JSONObject(statusStr)
@@ -167,19 +170,17 @@ class SyncViewModel : ViewModel() {
             return false
         }
 
-        updateText(jsonResult.optString("message"))
+        val message = jsonResult.optString("error")
+        updateText(message)
 
-//        val prefs = PreferenceManager.getDefaultSharedPreferences(
-//            context.applicationContext
-//        )
+        val statusCount = jsonResult.optJSONObject("status_count")
+        if (statusCount != null) {
+            val sentCount = statusCount.optInt("sent")
+            val receivedCount = statusCount.optInt("received")
+            updateStatusCount(sentCount, receivedCount)
+        }
 
-//        val dataDir = context.getExternalFilesDir("data")?.toString() ?: (context.filesDir.toString() + "/data")
-
-        // If external storage is used there is no easy way to obtain
-        // directory path from uri, hence we always write to private data
-        // and then copy files
         val received = sync.receive();
-
         if (received.isEmpty()) {
             sendClipboard(context, "")
             return true
@@ -200,110 +201,24 @@ class SyncViewModel : ViewModel() {
                 prefs.edit().putString("remoteCertificates", "$remoteCertificates\n$received")
                     .apply()
             }
+            updateText("Certificate received")
             receiveCertificate = false
             return false
         }
 
         // files are handled by the receiver
         if (received.startsWith("file://")) {
+            updateFileCount(received.lines().count())
             return true
         }
 
+        val clipboard = context.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText("simple text", received)
         clipboard.setPrimaryClip(clip)
         updateHash(received)
 
         return true
-
-//        var clip = ClipData.newPlainText("simple text", received)
-//
-//        var uriCreated = false
-//        val permissions = context.contentResolver.persistedUriPermissions
-//        val sharedDir = try {
-//            permissions.last().uri?.let {
-//
-//                if (prefs.getBoolean("useSharedDirectory", false)) DocumentFile.fromTreeUri(
-//                    context,
-//                    it
-//                ) else null
-//            }
-//        } catch (e: NoSuchElementException) {
-//            null
-//        }
-//
-//
-//        for (line in received.lines()) {
-//            val file = File(URI.create(line))
-//            val uri = FileProvider.getUriForFile(
-//                context,
-//                BuildConfig.APPLICATION_ID + ".file_provider",
-//                file
-//            )
-//            if (sharedDir != null) {
-//                val sharedFile =
-//                    sharedDir.createFile(
-//                        context.contentResolver.getType(uri).orEmpty(),
-//                        file.name
-//                    )
-//
-//                val to = sharedFile?.uri?.let { sharedUri ->
-//                    context.contentResolver.openOutputStream(
-//                        sharedUri
-//                    )
-//                }
-//                val from = context.contentResolver.openInputStream(uri)
-//                try {
-//                    from!!.copyTo(to!!)
-//                    file.delete()
-//                } catch (_: NullPointerException) {
-//                    updateText("Failed to create file ${file.name}")
-//                    continue
-//                }
-//            }
-//            if (!uriCreated) {
-//                clip = ClipData.newUri(context.contentResolver, "URI", uri)
-//                uriCreated = true
-//            } else {
-//                clip.addItem(ClipData.Item(uri))
-//            }
-//        }
-//        clipboard.setPrimaryClip(clip)
-//        updateHash(received)
-//        updateFileCount(
-//            if (sharedDir != null) {
-//                clip.itemCount
-//            } else {
-//                getAllFiles(
-//                    context,
-//                    context.filesDir
-//                ).count()
-//            }
-//        )
     }
-//
-//    fun getAllFiles(context: Context, directory: File): ArrayList<Uri> {
-//        val fileUris: ArrayList<Uri> = arrayListOf()
-//        for (filePath in directory.listFiles().orEmpty()) {
-//            if (filePath.isDirectory) {
-//                val newFiles = getAllFiles(context, filePath)
-//                fileUris.addAll(newFiles)
-//            } else {
-//                try {
-//                    val uri = FileProvider.getUriForFile(
-//                        context,
-//                        BuildConfig.APPLICATION_ID + ".file_provider",
-//                        filePath
-//                    )
-//                    fileUris.add(uri)
-//                } catch (e: IllegalArgumentException) {
-//                    Log.e("error adding", "${e.message} $filePath")
-//                } catch (e: StringIndexOutOfBoundsException) {
-//                    Log.e("error adding", "${e.message} $filePath")
-//                }
-//            }
-//        }
-//        return fileUris
-//    }
 
     fun sendCertificate(context: Context, certificate: String) {
         if (sync.isRunning()) {
@@ -333,14 +248,16 @@ class SyncViewModel : ViewModel() {
             return false
         }
 
-        val status = jsonResult.optString("message")
+        val state = jsonResult.optBoolean("state")
+
+        val status = jsonResult.optString("error")
         updateText(status)
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(
             context.applicationContext
         )
 
-        if (!jsonResult.optBoolean("state")) {
+        if (!state) {
             return false
         } else if (prefs.getBoolean("notification", false)) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -364,8 +281,10 @@ class SyncViewModel : ViewModel() {
             updateText(e.toString())
             return false
         }
-        val message = jsonResult.optString("message")
+
+        val message = jsonResult.optString("error")
         updateText(message)
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.stopService(
                 Intent(
@@ -441,22 +360,6 @@ class SyncViewModel : ViewModel() {
         return helper.prefsToJson(prefs, dataDir)
     }
 
-//    private fun saveFilesTo(context: AppCompatActivity, fileUris: ArrayList<Uri>) {
-//        val shareIntent = Intent().apply {
-//            action = Intent.ACTION_SEND_MULTIPLE
-//            putParcelableArrayListExtra(Intent.EXTRA_STREAM, fileUris)
-//            type = "*/*"
-//            flags =
-//                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-//        }
-//        viewModelScope.launch {
-//            context.startActivityForResult(
-//                Intent.createChooser(shareIntent, "Save files to.."),
-//                Config.MOVE_FILES_INTENT,
-//            )
-//        }
-//    }
-
     private fun updateHash(text: String) {
         lastHash = helper.hashString(text)
     }
@@ -468,7 +371,4 @@ class SyncViewModel : ViewModel() {
     private fun markServiceRunning(running: Boolean) {
         serviceRunning = running
     }
-
-
-
 }
