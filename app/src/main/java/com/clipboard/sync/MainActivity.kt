@@ -11,11 +11,8 @@ import android.os.Parcelable
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.Switch
-import android.widget.ToggleButton
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.add
 import androidx.fragment.app.commit
 import kotlinx.coroutines.MainScope

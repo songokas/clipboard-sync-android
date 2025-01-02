@@ -69,7 +69,6 @@ class SettingsActivity : AppCompatActivity() {
 
         override fun afterTextChanged(editable: Editable) {
             val validationError = validation(editable)
-//                        editText.error = validationError
             editText.rootView.findViewById<View>(android.R.id.button1).isEnabled =
                 validationError == null
         }
@@ -121,7 +120,7 @@ class SettingsActivity : AppCompatActivity() {
 
             host1!!.setOnBindEditTextListener { editText ->
                 editText.inputType = InputType.TYPE_TEXT_VARIATION_URI
-                editText.addTextChangedListener(ButtonValidation(editText, socketValidation))
+                editText.addTextChangedListener(ButtonValidation(editText, socketValidationOptional))
             }
 
             val host2 =

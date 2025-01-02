@@ -92,8 +92,6 @@ class SyncViewModel : ViewModel() {
         val clipItem = clipboard.primaryClip?.getItemAt(0)
         val clipItemText = clipItem?.coerceToText(context)
         if (clipItem == null || clipItemText.isNullOrEmpty()) {
-//            val status = context.resources.getString(R.string.empty_clipboard)
-//            updateText(status)
             return
         }
 
