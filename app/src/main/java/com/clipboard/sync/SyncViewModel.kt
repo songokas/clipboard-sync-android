@@ -297,9 +297,9 @@ class SyncViewModel : ViewModel() {
         } else if (prefs.getBoolean("notification", false)) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 markServiceRunning(true)
-                context.startForegroundService(
+                context.applicationContext.startForegroundService(
                     Intent(
-                        context,
+                        context.applicationContext,
                         SyncClipboardService::class.java
                     )
                 )

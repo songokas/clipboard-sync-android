@@ -77,6 +77,12 @@ class MainFragment : Fragment() {
             countView.text = getString(R.string.sent_received_text, count.sent, count.received)
         }
 
+        if (viewModel.isRunning()) {
+            toggleButton.isChecked = true
+            textView.text = "Started"
+        }
+
+
         toggleButton.setOnCheckedChangeListener { _, isChecked ->
             activity?.let {
                 val act = it as MainActivity
