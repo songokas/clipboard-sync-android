@@ -23,7 +23,6 @@
     <androidx.preference.EditTextPreference
         app:key="host1"
         app:title="Host 1"
-        app:defaultValue="224.0.0.89:8900"
         app:summary="Where to send"/>
 
     <androidx.preference.EditTextPreference

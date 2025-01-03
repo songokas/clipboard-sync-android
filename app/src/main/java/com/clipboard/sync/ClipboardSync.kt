@@ -22,6 +22,7 @@ class ClipboardSync {
     external fun receive(): String
 
     external fun generateCertificates(): String
+    external fun certificateInfo(certificate: String): String
 
     external fun queue(clipboard: ByteArray, messageType: String): String
     external fun queueFiles(map: Map<String, ByteArray>): String

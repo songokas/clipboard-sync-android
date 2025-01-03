@@ -17,6 +17,7 @@ import java.io.File
 import java.util.HashMap
 
 data class Certificates(val privateKey: String, val certificateChain: String, val subject: String?)
+data class CertificateInfo(val dnsNames: Array<String>, val serial: String)
 data class StatusCount(val sent: Int, val received: Int)
 
 class SyncViewModel : ViewModel() {
@@ -77,6 +78,22 @@ class SyncViewModel : ViewModel() {
             jsonResult.getString("certificate_chain"),
             jsonResult.optString("subject")
         )
+    }
+
+    fun certificateInfo(certificate: String): CertificateInfo? {
+        val certificates = sync.certificateInfo(certificate)
+        try {
+            val obj = JSONObject(certificates)
+            val names = obj.getJSONArray("dns_names")
+            return CertificateInfo(
+                Array(names.length()) { i -> names.getString(i) },
+                obj.getString("serial"),
+            )
+        } catch (e: JSONException) {
+            Log.d("Failed to parse json", e.toString())
+            return null
+        }
+
     }
 
     fun sendClipboard(
@@ -188,17 +205,26 @@ class SyncViewModel : ViewModel() {
 
         // handle certificate
         if (receiveCertificate && received.startsWith("-----BEGIN CERTIFICATE-----")) {
+            val certInfo = certificateInfo(received)
+            if (certInfo == null) {
+                updateText("Unknown certificate received. Ignoring")
+                return true
+            }
             val prefs = PreferenceManager.getDefaultSharedPreferences(
                 context.applicationContext
             )
             val remoteCertificates = prefs.getString("remoteCertificates", null)
+            val comment = "# ${certInfo.serial} ${certInfo.dnsNames.joinToString(",")}"
             if (remoteCertificates.isNullOrEmpty()) {
-                prefs.edit().putString("remoteCertificates", received)
+                prefs.edit().putString("remoteCertificates", "$comment\n$received")
                     .apply()
             } else {
-                prefs.edit().putString("remoteCertificates", "$remoteCertificates\n$received")
-                    .apply()
+                if (!remoteCertificates.contains(received)) {
+                    prefs.edit().putString("remoteCertificates", "$comment\n$received\n${remoteCertificates}")
+                        .apply()
+                }
             }
+            updateText("${certInfo.serial} ${certInfo.dnsNames.joinToString(",")}")
             updateText("Certificate received")
             receiveCertificate = false
             return false
@@ -228,7 +254,8 @@ class SyncViewModel : ViewModel() {
 
         viewModelScope.launch {
             val json = createJsonObject(context)
-            val status = sendTextBuffer(json.toString(), certificate)
+            json.put("do_not_verify_server_certificate", true);
+            val status = sendTextBuffer(json.toString(), certificate, "public_key")
             updateText(status)
         }
     }
@@ -238,7 +265,11 @@ class SyncViewModel : ViewModel() {
     }
 
     private fun startSync(context: Context): Boolean {
-        val statusStr = sync.startSync(createJson(context))
+        var json = createJsonObject(context)
+        if (receiveCertificate) {
+            json.put("do_not_verify_client_certificate", true)
+        }
+        val statusStr = sync.startSync(json.toString())
         val jsonResult = try {
             JSONObject(statusStr)
         } catch (e: JSONException) {
@@ -302,8 +333,9 @@ class SyncViewModel : ViewModel() {
     private suspend fun sendTextBuffer(
         json: String,
         text: String,
+        messageType: String = "text",
     ): String = withContext(Dispatchers.IO) {
-        sync.send(json, text.toByteArray(), "text", 5000)
+        sync.send(json, text.toByteArray(), messageType, 5000)
     }
 
     private suspend fun sendFile(

@@ -64,6 +64,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="60dp"
             android:layout_marginBottom="24dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
             android:lines="7"
             android:text="@string/hello_first_fragment"
             app:layout_constraintBottom_toTopOf="@id/copy_input"
