@@ -92,6 +92,18 @@ class MessageHelper {
             json.put("remote_certificates", prefs.getString("remoteCertificates", null))
         }
 
+        val maxReceiveSize = prefs.getString("maxReceiveSize", "52428800")
+        try {
+            json.put("max_receive_size", maxReceiveSize?.toInt());
+        } catch (e: NumberFormatException) {
+        }
+
+        val maxFileSize = prefs.getString("maxFileSize", "20971520")
+        try {
+            json.put("max_file_size", maxFileSize?.toInt());
+        } catch (e: NumberFormatException) {
+        }
+
         return json
     }
 

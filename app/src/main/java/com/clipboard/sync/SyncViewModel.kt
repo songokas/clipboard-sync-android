@@ -5,9 +5,6 @@ import android.content.Context.CLIPBOARD_SERVICE
 import android.net.Uri
 import android.os.Build
 import android.util.Log
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.FileProvider
-import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -17,8 +14,13 @@ import kotlinx.coroutines.*
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
-import java.net.URI
-import java.nio.ByteBuffer
+import java.util.HashMap
+
+data class Certificates(val privateKey: String, val certificateChain: String, val subject: String?)
+data class CertificateInfo(val dnsNames: Array<String>, val serial: String)
+data class StatusCount(val sent: Int, val received: Int)
+
+enum class ClipboardState { CertificateReceived }
 
 class SyncViewModel : ViewModel() {
 
@@ -28,18 +30,31 @@ class SyncViewModel : ViewModel() {
     private val lastText = MutableLiveData<String>()
     val textChanges: LiveData<String> get() = lastText
 
+    private val lastClipboardState = MutableLiveData<ClipboardState>()
+    val clipboardStateChanges: LiveData<ClipboardState> get() = lastClipboardState
+
+    private val statusCount = MutableLiveData<StatusCount>()
+    val statusCountChanges: LiveData<StatusCount> get() = statusCount
+
     private val fileCount = MutableLiveData<Int>()
     val fileCountChanges: LiveData<Int> get() = fileCount
 
     private var serviceRunning: Boolean = false
     private var lastHash: String = ""
     private var isChecked: Boolean = false
+    private var receiveCertificate: Boolean = false
 
     fun updateText(text: String) {
-        lastText.value = text
+        if (text.isNotEmpty()) {
+            lastText.value = text
+        }
     }
 
-    fun updateFileCount(count: Int) {
+    private fun updateStatusCount(sent: Int, received: Int) {
+        statusCount.value = StatusCount(sent, received)
+    }
+
+    private fun updateFileCount(count: Int) {
         fileCount.value = count
     }
 
@@ -55,6 +70,37 @@ class SyncViewModel : ViewModel() {
         return serviceRunning
     }
 
+    fun generateCertificates(): Certificates? {
+        val certificates = sync.generateCertificates()
+        val jsonResult = try {
+            JSONObject(certificates)
+        } catch (e: JSONException) {
+            Log.d("Failed to parse json", e.toString())
+            return null
+        }
+        return Certificates(
+            jsonResult.getString("private_key"),
+            jsonResult.getString("certificate_chain"),
+            jsonResult.optString("subject")
+        )
+    }
+
+    fun certificateInfo(certificate: String): CertificateInfo? {
+        val certificates = sync.certificateInfo(certificate)
+        try {
+            val obj = JSONObject(certificates)
+            val names = obj.getJSONArray("dns_names")
+            return CertificateInfo(
+                Array(names.length()) { i -> names.getString(i) },
+                obj.getString("serial"),
+            )
+        } catch (e: JSONException) {
+            Log.d("Failed to parse json", e.toString())
+            return null
+        }
+
+    }
+
     fun sendClipboard(
         context: Context,
         textToUse: String,
@@ -64,11 +110,10 @@ class SyncViewModel : ViewModel() {
             val clip = ClipData.newPlainText("simple text", textToUse)
             clipboard.setPrimaryClip(clip)
         }
+
         val clipItem = clipboard.primaryClip?.getItemAt(0)
         val clipItemText = clipItem?.coerceToText(context)
         if (clipItem == null || clipItemText.isNullOrEmpty()) {
-            val status = context.resources.getString(R.string.empty_clipboard)
-            updateText(status)
             return
         }
 
@@ -116,142 +161,121 @@ class SyncViewModel : ViewModel() {
     }
 
 
-    fun handleSendFileAsync(context: Context, resolver: ContentResolver, it: Uri): Deferred<Unit> {
-        Log.d("send file", it.toString())
-        val fileName = helper.getFileName(resolver, it)!!
+    fun handleSendFileAsync(context: Context, resolver: ContentResolver, uri: Uri): Deferred<Unit> {
+        Log.d("send file", uri.toString())
+        val fileName = helper.getFileName(resolver, uri)!!
         updateText("Preparing to send file $fileName")
         return viewModelScope.async {
-            val status = sendFile(context, resolver, it, fileName)
+            val status = sendFile(context, resolver, uri, fileName)
             updateText(status)
         }
     }
 
-
-    fun moveAllFiles(context: AppCompatActivity) {
-        val fileUris = getAllFiles(context, context.filesDir)
-        if (fileUris.isNotEmpty()) {
-            saveFilesTo(context, fileUris)
+    fun handleSendFilesAsync(context: Context, resolver: ContentResolver, uris: List<Uri>): Deferred<Unit> {
+        return viewModelScope.async {
+            val status = sendFiles(context, resolver, uris)
+            updateText(status)
         }
     }
 
-    fun processStatus(context: Context) {
-        val clipboard = context.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+    fun processStatus(context: Context): Boolean {
         val statusStr = sync.status()
         val jsonResult = try {
             JSONObject(statusStr)
         } catch (e: JSONException) {
             updateText(e.toString())
-            return
+            return false
         }
         if (!jsonResult.getBoolean("state")) {
-            return
+            return false
         }
 
-        updateText(jsonResult.optString("message"))
+        val message = jsonResult.optString("error")
+        updateText(message)
 
-        val received = sync.receive()
+        val statusCount = jsonResult.optJSONObject("status_count")
+        if (statusCount != null) {
+            val sentCount = statusCount.optInt("sent")
+            val receivedCount = statusCount.optInt("received")
+            updateStatusCount(sentCount, receivedCount)
+        }
+
+        val received = sync.receive();
         if (received.isEmpty()) {
             sendClipboard(context, "")
-            return
+            return true
         }
 
-        var clip = ClipData.newPlainText("simple text", received)
-        if (!received.startsWith("file://")) {
-            clipboard.setPrimaryClip(clip)
-            updateHash(received)
-            return
-        }
+        Log.d("clipboard", "Received clipboard $received");
 
-        var uriCreated = false
-        val permissions = context.contentResolver.persistedUriPermissions
-        val sharedDir = try {
-            permissions.last().uri?.let {
-                val prefs = PreferenceManager.getDefaultSharedPreferences(
-                    context.applicationContext
-                )
-                if (prefs.getBoolean("useSharedDirectory", false)) DocumentFile.fromTreeUri(
-                    context,
-                    it
-                ) else null
+        // handle certificate
+        if (receiveCertificate && received.startsWith("-----BEGIN CERTIFICATE-----")) {
+            val certInfo = certificateInfo(received)
+            if (certInfo == null) {
+                updateText("Unknown certificate received. Ignoring")
+                return true
             }
-        } catch (e: NoSuchElementException) {
-            null
-        }
-        for (line in received.lines()) {
-            val file = File(URI.create(line))
-            val uri = FileProvider.getUriForFile(
-                context,
-                BuildConfig.APPLICATION_ID + ".file_provider",
-                file
+            val prefs = PreferenceManager.getDefaultSharedPreferences(
+                context.applicationContext
             )
-            if (sharedDir != null) {
-                val sharedFile =
-                    sharedDir.createFile(
-                        context.contentResolver.getType(uri).orEmpty(),
-                        file.name
-                    )
-
-                val to = sharedFile?.uri?.let { sharedUri ->
-                    context.contentResolver.openOutputStream(
-                        sharedUri
-                    )
-                }
-                val from = context.contentResolver.openInputStream(uri)
-                try {
-                    from!!.copyTo(to!!)
-                    file.delete()
-                } catch (_: NullPointerException) {
-                    updateText("Failed to create file ${file.name}")
-                    continue
-                }
-            }
-            if (!uriCreated) {
-                clip = ClipData.newUri(context.contentResolver, "URI", uri)
-                uriCreated = true
+            val remoteCertificates = prefs.getString("remoteCertificates", null)
+            val comment = "# ${certInfo.serial} ${certInfo.dnsNames.joinToString(",")}"
+            if (remoteCertificates.isNullOrEmpty()) {
+                prefs.edit().putString("remoteCertificates", "$comment\n$received")
+                    .apply()
             } else {
-                clip.addItem(ClipData.Item(uri))
+                if (!remoteCertificates.contains(received)) {
+                    prefs.edit().putString("remoteCertificates", "$comment\n$received\n${remoteCertificates}")
+                        .apply()
+                }
             }
+            updateText("${certInfo.serial} ${certInfo.dnsNames.joinToString(",")}")
+            updateText("Certificate received")
+            lastClipboardState.value = ClipboardState.CertificateReceived;
+            receiveCertificate = false
+            return false
         }
+
+        // files are handled by the receiver
+        if (received.startsWith("file://")) {
+            updateFileCount(received.lines().count())
+            return true
+        }
+
+        val clipboard = context.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("simple text", received)
         clipboard.setPrimaryClip(clip)
         updateHash(received)
-        updateFileCount(
-            if (sharedDir != null) {
-                clip.itemCount
-            } else {
-                getAllFiles(
-                    context,
-                    context.filesDir
-                ).count()
-            }
-        )
+
+        return true
     }
 
-    fun getAllFiles(context: Context, directory: File): ArrayList<Uri> {
-        val fileUris: ArrayList<Uri> = arrayListOf()
-        for (filePath in directory.listFiles().orEmpty()) {
-            if (filePath.isDirectory) {
-                val newFiles = getAllFiles(context, filePath)
-                fileUris.addAll(newFiles)
-            } else {
-                try {
-                    val uri = FileProvider.getUriForFile(
-                        context,
-                        BuildConfig.APPLICATION_ID + ".file_provider",
-                        filePath
-                    )
-                    fileUris.add(uri)
-                } catch (e: IllegalArgumentException) {
-                    Log.e("error adding", "${e.message} $filePath")
-                } catch (e: StringIndexOutOfBoundsException) {
-                    Log.e("error adding", "${e.message} $filePath")
-                }
+    fun sendCertificate(context: Context, certificate: String) {
+        if (sync.isRunning()) {
+            viewModelScope.launch {
+                queueTextBuffer(certificate)
             }
+            return
         }
-        return fileUris
+
+        viewModelScope.launch {
+            val json = createJsonObject(context)
+            json.put("do_not_verify_server_certificate", true);
+            val status = sendTextBuffer(json.toString(), certificate, "public_key")
+            updateText(status)
+        }
+    }
+
+    fun waitForCertificate() {
+        receiveCertificate = true
     }
 
     private fun startSync(context: Context): Boolean {
-        val statusStr = sync.startSync(createJson(context))
+        var json = createJsonObject(context)
+        if (receiveCertificate) {
+            json.put("do_not_verify_client_certificate", true)
+        }
+        val statusStr = sync.startSync(json.toString())
         val jsonResult = try {
             JSONObject(statusStr)
         } catch (e: JSONException) {
@@ -259,14 +283,16 @@ class SyncViewModel : ViewModel() {
             return false
         }
 
-        val status = jsonResult.optString("message")
+        val state = jsonResult.optBoolean("state")
+
+        val status = jsonResult.optString("error")
         updateText(status)
 
         val prefs = PreferenceManager.getDefaultSharedPreferences(
             context.applicationContext
         )
 
-        if (!jsonResult.optBoolean("state")) {
+        if (!state) {
             return false
         } else if (prefs.getBoolean("notification", false)) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -290,8 +316,10 @@ class SyncViewModel : ViewModel() {
             updateText(e.toString())
             return false
         }
-        val message = jsonResult.optString("message")
+
+        val message = jsonResult.optString("error")
         updateText(message)
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.stopService(
                 Intent(
@@ -311,50 +339,61 @@ class SyncViewModel : ViewModel() {
     private suspend fun sendTextBuffer(
         json: String,
         text: String,
+        messageType: String = "text",
     ): String = withContext(Dispatchers.IO) {
-        sync.send(json, text.toByteArray(), "text")
+        sync.send(json, text.toByteArray(), messageType, 5000)
     }
 
     private suspend fun sendFile(
         context: Context,
         resolver: ContentResolver,
-        it: Uri,
+        uri: Uri,
         fileName: String
     ): String = withContext(Dispatchers.IO)
     {
-        val inputStream = resolver.openInputStream(it) ?: return@withContext "Unable to send file"
+        val inputStream = resolver.openInputStream(uri) ?: return@withContext "Unable to send file"
         val arr = inputStream.readBytes()
         inputStream.close()
 
         if (sync.isRunning()) {
             sync.queue(arr, fileName)
         } else {
-            sync.send(createJson(context), arr, fileName)
+            sync.send(createJson(context), arr, fileName, 20000)
+        }
+    }
+
+    private suspend fun sendFiles(
+        context: Context,
+        resolver: ContentResolver,
+        uris: List<Uri>,
+    ): String = withContext(Dispatchers.IO)
+    {
+        var map: HashMap<String, ByteArray> = hashMapOf()
+        for (uri in uris) {
+            val fileName = helper.getFileName(resolver, uri) ?: return@withContext "Unable to obtain file name $uri"
+            val inputStream = resolver.openInputStream(uri) ?: return@withContext "Unable open file $fileName"
+            val arr = inputStream.readBytes()
+            inputStream.close()
+            map[fileName] = arr
+        }
+        if (sync.isRunning()) {
+            sync.queueFiles(map)
+        } else {
+            sync.sendFiles(createJson(context), map, 20000)
         }
     }
 
     private fun createJson(context: Context): String {
-        val prefs = PreferenceManager.getDefaultSharedPreferences(
-            context.applicationContext
-        )
-        val json = helper.prefsToJson(prefs, context.filesDir)
+        val json = createJsonObject(context)
         return json.toString()
     }
 
-    private fun saveFilesTo(context: AppCompatActivity, fileUris: ArrayList<Uri>) {
-        val shareIntent = Intent().apply {
-            action = Intent.ACTION_SEND_MULTIPLE
-            putParcelableArrayListExtra(Intent.EXTRA_STREAM, fileUris)
-            type = "*/*"
-            flags =
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-        }
-        viewModelScope.launch {
-            context.startActivityForResult(
-                Intent.createChooser(shareIntent, "Save files to.."),
-                Config.MOVE_FILES_INTENT,
-            )
-        }
+    private fun createJsonObject(context: Context): JSONObject {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(
+            context.applicationContext
+        )
+        val dataDir = context.getExternalFilesDir("data") ?: File(context.filesDir, "data")
+        return helper.prefsToJson(prefs, dataDir)
     }
 
     private fun updateHash(text: String) {
@@ -368,5 +407,4 @@ class SyncViewModel : ViewModel() {
     private fun markServiceRunning(running: Boolean) {
         serviceRunning = running
     }
-
 }

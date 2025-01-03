@@ -1,8 +1,5 @@
 package com.clipboard.sync
 
-import android.app.Activity
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputFilter
@@ -13,19 +10,15 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.EditText
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat.startActivityForResult
-import androidx.preference.CheckBoxPreference
+import androidx.fragment.app.activityViewModels
 import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import java.net.URI
 import java.net.URISyntaxException
 
-
 class SettingsActivity : AppCompatActivity() {
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,18 +69,13 @@ class SettingsActivity : AppCompatActivity() {
 
         override fun afterTextChanged(editable: Editable) {
             val validationError = validation(editable)
-//                        editText.error = validationError
             editText.rootView.findViewById<View>(android.R.id.button1).isEnabled =
                 validationError == null
         }
     }
 
     class SettingsFragment : PreferenceFragmentCompat() {
-
-        private val selectFile = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-            // Handle the returned Uri
-        }
-
+        private val viewModel: SyncViewModel by activityViewModels()
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             setPreferencesFromResource(R.xml.root_preferences, rootKey)
 
@@ -132,7 +120,7 @@ class SettingsActivity : AppCompatActivity() {
 
             host1!!.setOnBindEditTextListener { editText ->
                 editText.inputType = InputType.TYPE_TEXT_VARIATION_URI
-                editText.addTextChangedListener(ButtonValidation(editText, socketValidation))
+                editText.addTextChangedListener(ButtonValidation(editText, socketValidationOptional))
             }
 
             val host2 =
@@ -209,27 +197,21 @@ class SettingsActivity : AppCompatActivity() {
                 )
             }
 
-            val useShared =
-                preferenceScreen.findPreference<Preference>("useSharedDirectory") as CheckBoxPreference?
-            useShared!!.setOnPreferenceChangeListener { _, value ->
-                if (value as Boolean) {
-                    releaseStoragePermissions()
-                    openDirectory()
-                }
-                true
-            }
-
             val privateKey =
                 preferenceScreen.findPreference<Preference>("privateKey") as EditTextPreference?
-
-            privateKey!!.setOnBindEditTextListener { editText ->
-                editText.setLines(7)
-            }
-
             val publicKey =
                 preferenceScreen.findPreference<Preference>("certificateChain") as EditTextPreference?
 
-            publicKey!!.setOnBindEditTextListener { editText ->
+            if (privateKey!!.text.isNullOrEmpty() || publicKey!!.text.isNullOrEmpty()) {
+                val certificates = viewModel.generateCertificates()
+                privateKey.text = certificates?.privateKey
+                publicKey!!.text = certificates?.certificateChain
+                publicKey.dialogTitle = certificates?.subject
+            }
+            privateKey.setOnBindEditTextListener { editText ->
+                editText.setLines(7)
+            }
+            publicKey.setOnBindEditTextListener { editText ->
                 editText.setLines(7)
             }
 
@@ -239,58 +221,21 @@ class SettingsActivity : AppCompatActivity() {
             certificates!!.setOnBindEditTextListener { editText ->
                 editText.setLines(7)
             }
-//            certificates.setOnPreferenceClickListener { _ ->
-//                selectFile.launch("*/*")
-//                true
-//            }
-        }
 
-        override fun onActivityResult(
-            requestCode: Int, resultCode: Int, resultData: Intent?
-        ) {
-            super.onActivityResult(requestCode, resultCode, resultData)
-            if (requestCode == Config.SAVE_FILES_INTENT) {
-                if (resultCode == Activity.RESULT_OK) {
-                    resultData?.data?.also { uri ->
-                        val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                        activity?.applicationContext?.contentResolver?.takePersistableUriPermission(
-                            uri,
-                            takeFlags
-                        )
-                    }
-                } else {
-                    val useShared =
-                        preferenceScreen.findPreference<Preference>("useSharedDirectory") as CheckBoxPreference?
-                    useShared?.isChecked = false
-                }
+            val maxReceiveSize =
+                preferenceScreen.findPreference<Preference>("maxReceiveSize") as EditTextPreference?
+
+            maxReceiveSize!!.setOnBindEditTextListener { editText ->
+                editText.inputType = InputType.TYPE_CLASS_NUMBER
             }
-        }
 
-        private fun releaseStoragePermissions() {
-            for (perm in activity?.contentResolver?.persistedUriPermissions.orEmpty()) {
-                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                activity?.contentResolver?.releasePersistableUriPermission(
-                    perm.uri,
-                    takeFlags
-                )
+            val maxFileSize =
+                preferenceScreen.findPreference<Preference>("maxFileSize") as EditTextPreference?
+
+            maxFileSize!!.setOnBindEditTextListener { editText ->
+                editText.inputType = InputType.TYPE_CLASS_NUMBER
             }
-        }
-
-        private fun openDirectory() {
-            startActivityForResult(
-                Intent(Intent.ACTION_OPEN_DOCUMENT_TREE),
-                Config.SAVE_FILES_INTENT
-            )
         }
     }
-
 }
 
-//private fun showFileChooser() {
-//    var chooseFile = Intent(Intent.ACTION_GET_CONTENT)
-//    chooseFile.setType("*/*")
-//    chooseFile = Intent.createChooser(chooseFile, "Choose a file")
-//    startActivityForResult(chooseFile, PICKFILE_RESULT_CODE)
-//}

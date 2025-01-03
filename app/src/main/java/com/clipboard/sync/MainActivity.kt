@@ -41,11 +41,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        Log.d(
-            "stop activity",
-            viewModel.isRunning().toString() + " " + viewModel.isServiceRunning()
-                .toString() + " " + userStarted
-        )
+        Log.d("stop activity", "running=${viewModel.isRunning()} started_by_user=$userStarted service_running=${viewModel.isServiceRunning()}")
         if (userStarted && !viewModel.isServiceRunning()) {
             viewModel.stopSync()
         }
@@ -53,7 +49,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onRestart() {
         super.onRestart()
-        Log.d("restart activity", viewModel.isRunning().toString() + " " + userStarted.toString())
+        Log.d("restart activity", "running=${viewModel.isRunning()} started_by_user=$userStarted")
         if (userStarted && !viewModel.isRunning()) {
             if (viewModel.changeState(this, true)) {
                 processUpdates(this)
@@ -87,30 +83,10 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    override fun onActivityResult(
-        requestCode: Int, resultCode: Int, resultData: Intent?
-    ) {
-        super.onActivityResult(requestCode, resultCode, resultData)
-        Log.d("activity", "received $requestCode $resultCode")
-        if (requestCode == Config.MOVE_FILES_INTENT) {
-            //@TODO remove only moved files
-            for (uri in viewModel.getAllFiles(this, filesDir)) {
-                Log.d("activity", "remove $uri")
-                try {
-                    contentResolver.delete(uri, null, null)
-                } catch (e: IllegalArgumentException) {
-                    Log.e("activity", "failed to remove file ${e.message}")
-                }
-            }
-            viewModel.updateFileCount(0)
-        }
-    }
-
     fun processUpdates(context: Context) {
         val runnable = object : Runnable {
             override fun run() {
-                if (userStarted) {
-                    viewModel.processStatus(context)
+                if (viewModel.processStatus(context)) {
                     timerHandler.postDelayed(this, 3000)
                 }
             }
@@ -134,25 +110,18 @@ class MainActivity : AppCompatActivity() {
                     closeAfterIntent()
                 }
             }
+
             Intent.ACTION_SEND_MULTIPLE -> {
                 val ac = this
                 mainScope.launch {
                     intent.getParcelableArrayListExtra<Parcelable>(Intent.EXTRA_STREAM)
                         ?.let { arrayList ->
-                            for (uri in arrayList) {
-                                try {
-                                    (uri as? Uri)?.let {
-                                        viewModel.handleSendFileAsync(
-                                            ac,
-                                            ac.contentResolver,
-                                            it
-                                        )
-                                            .await()
-                                    }
-                                } catch (e: NullPointerException) {
-                                    viewModel.updateText("Failed to send file")
-                                }
-                            }
+                            viewModel.handleSendFilesAsync(
+                                ac,
+                                ac.contentResolver,
+                                arrayList.filterIsInstance<Uri>()
+                            )
+                                .await()
                         }
                     closeAfterIntent()
                 }

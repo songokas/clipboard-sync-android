@@ -1,7 +1,5 @@
 package com.clipboard.sync
 
-import java.nio.ByteBuffer
-
 class ClipboardSync {
 
     companion object {
@@ -18,9 +16,14 @@ class ClipboardSync {
 
     external fun isRunning(): Boolean
 
-    external fun send(config: String, clipboard: ByteArray, messageType: String): String
+    external fun send(config: String, clipboard: ByteArray, messageType: String, timeoutMs: Long): String
+    external fun sendFiles(config: String, map: Map<String, ByteArray>, timeoutMs: Long): String
 
     external fun receive(): String
 
+    external fun generateCertificates(): String
+    external fun certificateInfo(certificate: String): String
+
     external fun queue(clipboard: ByteArray, messageType: String): String
+    external fun queueFiles(map: Map<String, ByteArray>): String
 }

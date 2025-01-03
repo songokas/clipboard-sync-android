@@ -1,103 +1,114 @@
-<PreferenceScreen
+<androidx.preference.PreferenceScreen
     xmlns:app="http://schemas.android.com/apk/res-auto" >
 
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="group"
         app:title="Group name"
         app:defaultValue="default"
         app:summary="Group to use"/>
 
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="key"
         app:title="Key"
         app:summary="Use the same key across your devices (32 chars long)"/>
 
-    <ListPreference
+    <androidx.preference.ListPreference
         app:key="protocol"
         app:title="Protocol"
         app:defaultValue="basic"
         app:entries="@array/protocol"
         app:entryValues="@array/protocol"
-        app:summary="Choose protocol (basic, tcp, laminar, quic)"/>
+        app:summary="Choose protocol (basic, tcp, tcp-tls, quic)"/>
 
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="host1"
         app:title="Host 1"
-        app:defaultValue="224.0.0.89:8900"
         app:summary="Where to send"/>
 
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="host2"
         app:title="Host 2"
         app:summary="Where to send"/>
 
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="host3"
         app:title="Host 3"
         app:summary="Where to send"/>
 
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="visibleIp"
         app:title="Your public ip"
         app:summary="Override public ip, ip presented after nat"/>
 
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="sendAddress1"
         app:title="Send using address"
         app:defaultValue="0.0.0.0:0"
         app:summary="Use address and port to send"/>
 
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="sendAddress2"
         app:title="Send using address"
         app:defaultValue="[::]:0"
         app:summary="Use address and port to send"/>
 
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="bindAddress1"
         app:title="Bind address"
         app:defaultValue="0.0.0.0:8900"
         app:summary="Bind to local address"/>
 
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="heartbeat"
         app:title="Keep alive"
         app:summary="Keep nat mapping alive in seconds" />
 
-    <CheckBoxPreference
+    <androidx.preference.CheckBoxPreference
         app:key="notification"
         app:title="Paste everywhere"
         app:summary="once started clipboard automatically updates"/>
 
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="relayServer"
         app:title="Relay server"
         app:defaultValue="clipsync.net:8900"
         app:summary="Use relay server. Set host to the same value in order to use it"/>
 
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="relayPublicKey"
         app:title="Relay public key"
         app:defaultValue="xskF0Ihe1s9gjIjw4VvL86FN8YkA3UHMjBzajRspwns="
         app:summary="Relay servers public key in base64"/>
 
-    <CheckBoxPreference
-        app:key="useSharedDirectory"
-        app:title="Use shared directory"
-        app:summary="Save files in this directory"/>
+<!--    <androidx.preference.CheckBoxPreference-->
+<!--        app:key="useSharedDirectory"-->
+<!--        app:title="Use shared directory"-->
+<!--        app:summary="Save files in this directory"/>-->
 
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="privateKey"
         app:title="Private Key"
         app:summary="Tls private key"/>
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="certificateChain"
         app:title="Certificate"
         app:summary="x509 certificate"/>
-    <EditTextPreference
+    <androidx.preference.EditTextPreference
         app:key="remoteCertificates"
         app:title="Remote certificates"
         app:summary="Allowed remote certificates" />
 
-</PreferenceScreen>
+    <androidx.preference.EditTextPreference
+        app:key="maxReceiveSize"
+        app:title="Max data size to receive"
+        app:defaultValue = "52428800"
+        app:summary="Max data size to receive" />
+
+    <androidx.preference.EditTextPreference
+        app:key="maxFileSize"
+        app:title="Max file size to write"
+        app:defaultValue = "20971520"
+        app:summary="Max file size to write" />
+
+</androidx.preference.PreferenceScreen>
 
