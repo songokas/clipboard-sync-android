@@ -260,7 +260,7 @@ class SyncViewModel : ViewModel() {
 
         viewModelScope.launch {
             val json = createJsonObject(context)
-            json.put("do_not_verify_server_certificate", true);
+            json.put("danger_server_no_verify", true);
             val status = sendTextBuffer(json.toString(), certificate, "public_key")
             updateText(status)
         }
@@ -273,7 +273,8 @@ class SyncViewModel : ViewModel() {
     private fun startSync(context: Context): Boolean {
         var json = createJsonObject(context)
         if (receiveCertificate) {
-            json.put("do_not_verify_client_certificate", true)
+            updateText("Warning client verification disabled")
+            json.put("danger_client_no_verify", true)
         }
         val statusStr = sync.startSync(json.toString())
         val jsonResult = try {
@@ -309,6 +310,7 @@ class SyncViewModel : ViewModel() {
     }
 
     private fun stopSync(context: Context): Boolean {
+        receiveCertificate = false
         val status = sync.stopSync()
         val jsonResult = try {
             JSONObject(status)
