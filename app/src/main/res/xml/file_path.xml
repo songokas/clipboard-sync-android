@@ -3,4 +3,7 @@
     <files-path
         name="data"
         path="data" />
+    <external-files-path
+        name="data"
+        path="data" />
 </paths>

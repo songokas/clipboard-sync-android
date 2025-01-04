@@ -1,17 +1,24 @@
 package com.clipboard.sync
 
+import android.app.AlertDialog
+import android.content.Context
+import android.content.DialogInterface
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.widget.SwitchCompat
+import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.preference.PreferenceManager
@@ -19,22 +26,24 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import java.io.File
 
+
 class MainFragment : Fragment() {
     private val viewModel: SyncViewModel by activityViewModels()
     private val mainScope = MainScope()
 
-    private val selectFiles = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { list: List<Uri?> ->
-            activity?.let {
-                mainScope.launch {
-                    val act = it as MainActivity
-                    viewModel.handleSendFilesAsync(act, act.contentResolver, list.filterNotNull()).await()
+    private val selectFiles =
+        registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { list: List<Uri?> ->
+            val files = list.filterNotNull()
+            if (files.isNotEmpty()) {
+                activity?.let {
+                    mainScope.launch {
+                        val act = it as MainActivity
+                        viewModel.handleSendFilesAsync(act, act.contentResolver, files)
+                            .await()
+                    }
                 }
             }
-    }
-
-    private val showFiles = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) {
-    }
-
+        }
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreateView(
@@ -49,6 +58,7 @@ class MainFragment : Fragment() {
         val saveButton: Button = view.findViewById(R.id.save_button)
         val sendButton: Button = view.findViewById(R.id.send_button)
         val sendFilesButton: Button = view.findViewById(R.id.send_files_button)
+        val removeFilesButton: Button = view.findViewById(R.id.remove_files_button)
         val editInput: EditText = view.findViewById(R.id.copy_input)
         val sendCertificateButton: Button = view.findViewById(R.id.send_certificate_button)
         val receiveCertificateButton: Button = view.findViewById(R.id.receive_certificate_button)
@@ -79,7 +89,7 @@ class MainFragment : Fragment() {
 
         if (viewModel.isRunning()) {
             toggleButton.isChecked = true
-            textView.text = "Started"
+            viewModel.updateText("Started")
         }
 
 
@@ -97,10 +107,38 @@ class MainFragment : Fragment() {
             }
         }
 
+        removeFilesButton.setOnClickListener {
+            context?.let {
+                val dataDir = it.getExternalFilesDir("data") ?: File(it.filesDir, "data")
+                val files = dataDir.listFiles()
+                if (!files.isNullOrEmpty()) {
+                    AlertDialog.Builder(it)
+                        .setMessage("Do you really want to remove all files?")
+                        .setIcon(android.R.drawable.ic_dialog_alert)
+                        .setPositiveButton(android.R.string.yes, { _, _ -> removeAllFiles(files) })
+                        .setNegativeButton(android.R.string.no, null).show()
+                } else {
+                    viewModel.updateText("Directory is empty")
+                }
+            }
+        }
+
         saveButton.setOnClickListener {
             context?.let {
                 val dataDir = it.getExternalFilesDir("data") ?: File(it.filesDir, "data")
-                showFiles.launch(Uri.fromFile(dataDir))
+                val uris = getAllFiles(it, dataDir)
+                Log.d("uris", "all files: $uris");
+                if (uris.isNotEmpty()) {
+                    val shareIntent = Intent().apply {
+                        action = Intent.ACTION_SEND_MULTIPLE
+                        putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+                        type = "*/*"
+                    }
+                    shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    startActivity(Intent.createChooser(shareIntent, "Copy files"))
+                } else {
+                    viewModel.updateText("Directory is empty")
+                }
             }
         }
 
@@ -135,3 +173,45 @@ class MainFragment : Fragment() {
         return view
     }
 }
+
+fun removeAllFiles(files: Array<File>) {
+    for (file in files) {
+        file.deleteRecursively()
+    }
+}
+
+fun getAllFiles(context: Context, directory: File): ArrayList<Uri> {
+    val fileUris: ArrayList<Uri> = arrayListOf()
+    for (filePath in directory.listFiles().orEmpty()) {
+        if (filePath.isDirectory) {
+            val newFiles = getAllFiles(context, filePath)
+            fileUris.addAll(newFiles)
+        } else {
+            try {
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    BuildConfig.APPLICATION_ID + ".file_provider",
+                    filePath
+                )
+                fileUris.add(uri)
+            } catch (e: IllegalArgumentException) {
+                Log.e("error adding", "${e.message} $filePath")
+            } catch (e: StringIndexOutOfBoundsException) {
+                Log.e("error adding", "${e.message} $filePath")
+            }
+        }
+    }
+    return fileUris
+}
+
+//fun openDefaultFileManager(dataDir: File) {
+//    val intent = Intent(Intent.ACTION_VIEW)
+//    intent.setComponent(
+//        ComponentName(
+//            "com.marc.files",
+//            "nl.marc_apps.files.MainActivity"
+//        )
+//    )
+//    intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, Uri.parse("file:///$dataDir"));  // Replace with the path to your folder
+//    startActivity(intent)
+//}

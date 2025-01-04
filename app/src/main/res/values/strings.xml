@@ -15,5 +15,6 @@
     <string name="edit_input_hint">Enter text to send</string>
     <string name="no_certificate_specified">No certificate specified</string>
     <string name="sent_received_text">sent: %d received: %d</string>
+    <string name="remove_files_button_text">Remove Files</string>
 
 </resources>
