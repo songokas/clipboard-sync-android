@@ -100,7 +100,7 @@ class MainActivity : AppCompatActivity() {
                 val ac = this
                 mainScope.launch {
                     try {
-                        (intent.getParcelableExtra<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let {
+                        (intent.getParcelableExtraProvider<Parcelable>(Intent.EXTRA_STREAM) as? Uri)?.let {
                             viewModel.handleSendFileAsync(ac, ac.contentResolver, it)
                                 .await()
                         }
@@ -114,7 +114,7 @@ class MainActivity : AppCompatActivity() {
             Intent.ACTION_SEND_MULTIPLE -> {
                 val ac = this
                 mainScope.launch {
-                    intent.getParcelableArrayListExtra<Parcelable>(Intent.EXTRA_STREAM)
+                    intent.getParcelableArrayListExtraProvider<Parcelable>(Intent.EXTRA_STREAM)
                         ?.let { arrayList ->
                             viewModel.handleSendFilesAsync(
                                 ac,

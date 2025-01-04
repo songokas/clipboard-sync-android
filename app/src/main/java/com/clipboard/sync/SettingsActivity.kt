@@ -83,6 +83,7 @@ class SettingsActivity : AppCompatActivity() {
                 preferenceScreen.findPreference<Preference>("key") as EditTextPreference?
 
             key!!.setOnBindEditTextListener { editText ->
+                editText.inputType = InputType.TYPE_TEXT_VARIATION_PASSWORD
                 editText.filters = arrayOf<InputFilter>(LengthFilter(32))
                 val validation = { editable: Editable ->
                     if (editable.count() != 32) {
@@ -204,14 +205,16 @@ class SettingsActivity : AppCompatActivity() {
 
             if (privateKey!!.text.isNullOrEmpty() || publicKey!!.text.isNullOrEmpty()) {
                 val certificates = viewModel.generateCertificates()
-                privateKey.text = certificates?.privateKey
-                publicKey!!.text = certificates?.certificateChain
-                publicKey.dialogTitle = certificates?.subject
+                if (certificates != null) {
+                    privateKey.text = certificates.privateKey
+                    publicKey!!.text = "# ${certificates.subject}\n${certificates.certificateChain}"
+                }
+
             }
             privateKey.setOnBindEditTextListener { editText ->
                 editText.setLines(7)
             }
-            publicKey.setOnBindEditTextListener { editText ->
+            publicKey!!.setOnBindEditTextListener { editText ->
                 editText.setLines(7)
             }
 

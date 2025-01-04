@@ -2,7 +2,6 @@ package com.clipboard.sync
 
 import android.app.AlertDialog
 import android.content.Context
-import android.content.DialogInterface
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -14,7 +13,6 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.widget.SwitchCompat
@@ -89,7 +87,7 @@ class MainFragment : Fragment() {
 
         if (viewModel.isRunning()) {
             toggleButton.isChecked = true
-            viewModel.updateText("Started")
+            viewModel.updateText("Running")
         }
 
 
@@ -115,14 +113,17 @@ class MainFragment : Fragment() {
                     AlertDialog.Builder(it)
                         .setMessage("Do you really want to remove all files?")
                         .setIcon(android.R.drawable.ic_dialog_alert)
-                        .setPositiveButton(android.R.string.yes, { _, _ -> removeAllFiles(files) })
-                        .setNegativeButton(android.R.string.no, null).show()
+                        .setPositiveButton(android.R.string.ok, { _, _ -> removeAllFiles(files) })
+                        .setNegativeButton(android.R.string.cancel, null).show()
                 } else {
                     viewModel.updateText("Directory is empty")
                 }
             }
         }
 
+        // since android does not allow viewing externalFilesDir from 29 (except for a chosen applications)
+        // provide user a way to save files somewhere
+        // files are written by jni
         saveButton.setOnClickListener {
             context?.let {
                 val dataDir = it.getExternalFilesDir("data") ?: File(it.filesDir, "data")
